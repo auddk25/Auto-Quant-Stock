@@ -1,0 +1,29 @@
+"""
+Strategy template for Auto-Quant US Stocks.
+Copy this file, rename it (without _ prefix), and modify.
+
+Rules:
+- Must define exactly one class that inherits from backtesting.Strategy
+- Must implement init() and next()
+- Timeframe is daily (1d) — set by data, not by strategy
+- Use self.I() to wrap indicators (avoids look-ahead bias)
+- Use self.buy() / self.sell() / self.position.close() for trades
+"""
+from backtesting import Strategy
+from backtesting.lib import crossover
+
+class MyStrategy(Strategy):
+    # Parameters — agent can tune these
+    fast_period = 10
+    slow_period = 30
+
+    def init(self):
+        close = self.data.Close
+        self.fast_ma = self.I(lambda x: x.rolling(self.fast_period).mean(), close)
+        self.slow_ma = self.I(lambda x: x.rolling(self.slow_period).mean(), close)
+
+    def next(self):
+        if crossover(self.fast_ma, self.slow_ma):
+            self.buy()
+        elif crossover(self.slow_ma, self.fast_ma):
+            self.position.close()

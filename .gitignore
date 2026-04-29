@@ -10,12 +10,8 @@ run.log
 !versions/**/run.log
 !versions/**/*.log
 
-# FreqTrade-generated output
-user_data/data/
-user_data/backtest_results/
-user_data/logs/
-user_data/hyperopt_results/
-user_data/notebooks/.ipynb_checkpoints/
+# Downloaded data
+data/
 
 # Python / uv
 __pycache__/
