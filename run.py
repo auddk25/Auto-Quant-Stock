@@ -6,11 +6,36 @@ Do not modify.
 import importlib.util
 import sys
 import os
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from backtesting import Backtest
-from config import TICKERS, CASH, COMMISSION, TRADE_ON_CLOSE, EXCLUSIVE_ORDERS
+from config import (
+    DEV_TICKERS, VAL_AI, VAL_CROSS, ALL_TICKERS,
+    CASH, COMMISSION, TRADE_ON_CLOSE, EXCLUSIVE_ORDERS,
+)
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Backtest runner")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--validate-ai", action="store_true", help="Run on VAL_AI tickers")
+    group.add_argument("--validate-cross", action="store_true", help="Run on VAL_CROSS tickers")
+    group.add_argument("--validate-all", action="store_true", help="Run on VAL_AI + VAL_CROSS")
+    group.add_argument("--all", action="store_true", help="Run on ALL_TICKERS")
+    return parser.parse_args()
+
+def get_tickers(args):
+    if args.validate_ai:
+        return VAL_AI, "validate-ai"
+    elif args.validate_cross:
+        return VAL_CROSS, "validate-cross"
+    elif args.validate_all:
+        return sorted(set(VAL_AI + VAL_CROSS)), "validate-all"
+    elif args.all:
+        return ALL_TICKERS, "all"
+    else:
+        return DEV_TICKERS, "dev"
 
 def load_strategy(path):
     """Dynamically load a strategy class from a .py file."""
@@ -38,6 +63,9 @@ def run_one(strategy_cls, ticker):
     return stats
 
 def main():
+    args = parse_args()
+    tickers, mode = get_tickers(args)
+
     strat_dir = Path("strategies")
     strat_files = sorted([
         f for f in strat_dir.glob("*.py")
@@ -58,7 +86,7 @@ def main():
         worst_dd = 0
         ticker_results = []
 
-        for ticker in TICKERS:
+        for ticker in tickers:
             try:
                 stats = run_one(strategy_cls, ticker)
                 ret = stats["Return [%]"]
@@ -83,8 +111,9 @@ def main():
 
         print(f"---")
         print(f"strategy:         {sf.stem}")
+        print(f"mode:             {mode}")
         print(f"commit:           {commit}")
-        print(f"tickers:          {','.join(TICKERS)}")
+        print(f"tickers:          {','.join(tickers)}")
         print(f"avg_return_pct:   {avg_return:.2f}")
         print(f"total_return_pct: {total_return:.2f}")
         print(f"sharpe:           {sharpe:.4f}")

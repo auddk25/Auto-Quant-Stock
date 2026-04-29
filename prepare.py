@@ -2,11 +2,11 @@
 import yfinance as yf
 import pandas as pd
 import os
-from config import TICKERS, TIMERANGE_START, TIMERANGE_END
+from config import ALL_TICKERS, TIMERANGE_START, TIMERANGE_END
 
 os.makedirs("data", exist_ok=True)
 
-for ticker in TICKERS:
+for ticker in ALL_TICKERS:
     print(f"Downloading {ticker}...")
     try:
         df = yf.download(ticker, start=TIMERANGE_START, end=TIMERANGE_END, auto_adjust=True)
