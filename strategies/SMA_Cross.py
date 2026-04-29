@@ -1,14 +1,4 @@
-"""
-Strategy template for Auto-Quant US Stocks.
-Copy this file, rename it (without _ prefix), and modify.
-
-Rules:
-- Must define exactly one class that inherits from backtesting.Strategy
-- Must implement init() and next()
-- Timeframe is daily (1d) — set by data, not by strategy
-- Use self.I() to wrap indicators (avoids look-ahead bias)
-- Use self.buy() / self.sell() / self.position.close() for trades
-"""
+"""SMA crossover strategy — baseline."""
 from backtesting import Strategy
 from backtesting.lib import crossover
 import pandas as pd
@@ -16,7 +6,7 @@ import pandas as pd
 def sma(series, period):
     return pd.Series(series).rolling(period).mean().values
 
-class MyStrategy(Strategy):
+class SMA_Cross(Strategy):
     fast_period = 10
     slow_period = 30
 
