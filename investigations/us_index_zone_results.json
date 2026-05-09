@@ -1,0 +1,583 @@
+{
+  "symbols": {
+    "SPY": {
+      "dataMeta": {
+        "priceRows": 1759,
+        "start": "2019-10-16",
+        "end": "2025-12-30",
+        "cnnFearGreedRows": 1342,
+        "capeRows": 1740,
+        "trailingPeRows": 437,
+        "currentForwardPE": {
+          "date": "2026-04-30",
+          "forwardPE": 24.98,
+          "trailingPE": 28.25,
+          "historyAvailable": false,
+          "usage": "current_only_gate"
+        }
+      },
+      "best": {
+        "config": {
+          "name": "f0.40_v0.15_t0.35_th60",
+          "fear_weight": 0.4,
+          "valuation_weight": 0.15,
+          "technical_weight": 0.35,
+          "repair_weight": 0.09999999999999998,
+          "bottom_threshold": 60,
+          "heat_threshold": 60,
+          "conflict_gap": 15
+        },
+        "metrics": {
+          "score": 46.04819512896138,
+          "bottomDays": 1,
+          "heatDays": 18,
+          "transitions": 19,
+          "futureReturns": {
+            "bottom3mAvgPct": 26.424038385317328,
+            "bottom6mAvgPct": 36.35423418214374,
+            "bottom12mAvgPct": NaN
+          },
+          "futureDrawdowns": {
+            "heat1mAvgMaxDrawdownPct": -0.5720337504301669,
+            "heat3mAvgMaxDrawdownPct": -11.166889884209162,
+            "heat6mAvgMaxDrawdownPct": -28.510661587800744
+          },
+          "reference": {
+            "strategyReturnPct": 109.7428514094926,
+            "buyHoldReturnPct": 152.4797082878714,
+            "excessReturnPct": -42.7368568783788
+          },
+          "latest": {
+            "date": "2025-12-30",
+            "close": 685.138916015625,
+            "action": "hold",
+            "degree": 0,
+            "bottomScore": 21.13,
+            "heatScore": 46.3,
+            "vix": 14.33,
+            "fearGreed": 46.11,
+            "cape": 39.42,
+            "trailingPE": 27.77
+          }
+        }
+      },
+      "topConfigs": [
+        {
+          "config": {
+            "name": "f0.40_v0.15_t0.35_th60",
+            "fear_weight": 0.4,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.35,
+            "repair_weight": 0.09999999999999998,
+            "bottom_threshold": 60,
+            "heat_threshold": 60,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 46.04819512896138,
+            "bottomDays": 1,
+            "heatDays": 18,
+            "transitions": 19,
+            "futureReturns": {
+              "bottom3mAvgPct": 26.424038385317328,
+              "bottom6mAvgPct": 36.35423418214374,
+              "bottom12mAvgPct": NaN
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -0.5720337504301669,
+              "heat3mAvgMaxDrawdownPct": -11.166889884209162,
+              "heat6mAvgMaxDrawdownPct": -28.510661587800744
+            },
+            "reference": {
+              "strategyReturnPct": 109.7428514094926,
+              "buyHoldReturnPct": 152.4797082878714,
+              "excessReturnPct": -42.7368568783788
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 685.138916015625,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 21.13,
+              "heatScore": 46.3,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "f0.30_v0.15_t0.35_th50",
+            "fear_weight": 0.3,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.35,
+            "repair_weight": 0.19999999999999996,
+            "bottom_threshold": 50,
+            "heat_threshold": 50,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 44.752572487741496,
+            "bottomDays": 1,
+            "heatDays": 21,
+            "transitions": 19,
+            "futureReturns": {
+              "bottom3mAvgPct": 26.424038385317328,
+              "bottom6mAvgPct": 36.35423418214374,
+              "bottom12mAvgPct": NaN
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -0.6898047526087216,
+              "heat3mAvgMaxDrawdownPct": -9.99289809266966,
+              "heat6mAvgMaxDrawdownPct": -27.896632204858612
+            },
+            "reference": {
+              "strategyReturnPct": 110.13330787461845,
+              "buyHoldReturnPct": 152.4797082878714,
+              "excessReturnPct": -42.34640041325295
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 685.138916015625,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 28.88,
+              "heatScore": 38.55,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "f0.40_v0.15_t0.25_th55",
+            "fear_weight": 0.4,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.25,
+            "repair_weight": 0.19999999999999996,
+            "bottom_threshold": 55,
+            "heat_threshold": 55,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 39.405365148146494,
+            "bottomDays": 4,
+            "heatDays": 44,
+            "transitions": 27,
+            "futureReturns": {
+              "bottom3mAvgPct": 19.021625569164218,
+              "bottom6mAvgPct": 30.37213131048347,
+              "bottom12mAvgPct": 30.235357727290424
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -1.0468916332463984,
+              "heat3mAvgMaxDrawdownPct": -12.541169502834087,
+              "heat6mAvgMaxDrawdownPct": -24.386640025707926
+            },
+            "reference": {
+              "strategyReturnPct": 108.11825858777712,
+              "buyHoldReturnPct": 152.4797082878714,
+              "excessReturnPct": -44.36144970009428
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 685.138916015625,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 31.13,
+              "heatScore": 45.6,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "balanced_zone_v1",
+            "fear_weight": 0.35,
+            "valuation_weight": 0.2,
+            "technical_weight": 0.3,
+            "repair_weight": 0.15,
+            "bottom_threshold": 55,
+            "heat_threshold": 55,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 38.11109273046086,
+            "bottomDays": 3,
+            "heatDays": 43,
+            "transitions": 27,
+            "futureReturns": {
+              "bottom3mAvgPct": 19.039819258315237,
+              "bottom6mAvgPct": 28.686216585573533,
+              "bottom12mAvgPct": 19.891024910395405
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -0.8571202622041351,
+              "heat3mAvgMaxDrawdownPct": -13.511957906413478,
+              "heat6mAvgMaxDrawdownPct": -25.766126956024564
+            },
+            "reference": {
+              "strategyReturnPct": 110.50568059391139,
+              "buyHoldReturnPct": 152.4797082878714,
+              "excessReturnPct": -41.97402769396001
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 685.138916015625,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 25.72,
+              "heatScore": 46.37,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "f0.40_v0.15_t0.35_th55",
+            "fear_weight": 0.4,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.35,
+            "repair_weight": 0.09999999999999998,
+            "bottom_threshold": 55,
+            "heat_threshold": 55,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 34.08633221873384,
+            "bottomDays": 8,
+            "heatDays": 76,
+            "transitions": 53,
+            "futureReturns": {
+              "bottom3mAvgPct": 17.558428561484575,
+              "bottom6mAvgPct": 28.729463827104574,
+              "bottom12mAvgPct": 39.94078350177227
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -1.289171680540744,
+              "heat3mAvgMaxDrawdownPct": -9.707112082157947,
+              "heat6mAvgMaxDrawdownPct": -18.077208838485884
+            },
+            "reference": {
+              "strategyReturnPct": 115.77719453379399,
+              "buyHoldReturnPct": 152.4797082878714,
+              "excessReturnPct": -36.70251375407743
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 685.138916015625,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 21.13,
+              "heatScore": 46.3,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        }
+      ]
+    },
+    "QQQ": {
+      "dataMeta": {
+        "priceRows": 1759,
+        "start": "2019-10-16",
+        "end": "2025-12-30",
+        "cnnFearGreedRows": 1342,
+        "capeRows": 1740,
+        "trailingPeRows": 437,
+        "currentForwardPE": {
+          "date": "2026-04-30",
+          "forwardPE": 24.98,
+          "trailingPE": 28.25,
+          "historyAvailable": false,
+          "usage": "current_only_gate"
+        }
+      },
+      "best": {
+        "config": {
+          "name": "f0.40_v0.15_t0.35_th60",
+          "fear_weight": 0.4,
+          "valuation_weight": 0.15,
+          "technical_weight": 0.35,
+          "repair_weight": 0.09999999999999998,
+          "bottom_threshold": 60,
+          "heat_threshold": 60,
+          "conflict_gap": 15
+        },
+        "metrics": {
+          "score": 53.68841143144838,
+          "bottomDays": 2,
+          "heatDays": 26,
+          "transitions": 25,
+          "futureReturns": {
+            "bottom3mAvgPct": 32.238930399773444,
+            "bottom6mAvgPct": 45.70117307150102,
+            "bottom12mAvgPct": NaN
+          },
+          "futureDrawdowns": {
+            "heat1mAvgMaxDrawdownPct": -1.4897811976818456,
+            "heat3mAvgMaxDrawdownPct": -10.722452845705012,
+            "heat6mAvgMaxDrawdownPct": -17.183913014316495
+          },
+          "reference": {
+            "strategyReturnPct": 162.05627138647895,
+            "buyHoldReturnPct": 233.26343738623243,
+            "excessReturnPct": -71.20716599975347
+          },
+          "latest": {
+            "date": "2025-12-30",
+            "close": 618.64990234375,
+            "action": "hold",
+            "degree": 0,
+            "bottomScore": 21.13,
+            "heatScore": 44.11,
+            "vix": 14.33,
+            "fearGreed": 46.11,
+            "cape": 39.42,
+            "trailingPE": 27.77
+          }
+        }
+      },
+      "topConfigs": [
+        {
+          "config": {
+            "name": "f0.40_v0.15_t0.35_th60",
+            "fear_weight": 0.4,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.35,
+            "repair_weight": 0.09999999999999998,
+            "bottom_threshold": 60,
+            "heat_threshold": 60,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 53.68841143144838,
+            "bottomDays": 2,
+            "heatDays": 26,
+            "transitions": 25,
+            "futureReturns": {
+              "bottom3mAvgPct": 32.238930399773444,
+              "bottom6mAvgPct": 45.70117307150102,
+              "bottom12mAvgPct": NaN
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -1.4897811976818456,
+              "heat3mAvgMaxDrawdownPct": -10.722452845705012,
+              "heat6mAvgMaxDrawdownPct": -17.183913014316495
+            },
+            "reference": {
+              "strategyReturnPct": 162.05627138647895,
+              "buyHoldReturnPct": 233.26343738623243,
+              "excessReturnPct": -71.20716599975347
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 618.64990234375,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 21.13,
+              "heatScore": 44.11,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "f0.40_v0.15_t0.35_th55",
+            "fear_weight": 0.4,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.35,
+            "repair_weight": 0.09999999999999998,
+            "bottom_threshold": 55,
+            "heat_threshold": 55,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 41.61984974902774,
+            "bottomDays": 6,
+            "heatDays": 92,
+            "transitions": 45,
+            "futureReturns": {
+              "bottom3mAvgPct": 22.557324580882607,
+              "bottom6mAvgPct": 39.38948667258135,
+              "bottom12mAvgPct": 52.638103246840565
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -1.9848526832209894,
+              "heat3mAvgMaxDrawdownPct": -7.672857664680145,
+              "heat6mAvgMaxDrawdownPct": -12.186614945268081
+            },
+            "reference": {
+              "strategyReturnPct": 163.72889447355323,
+              "buyHoldReturnPct": 233.26343738623243,
+              "excessReturnPct": -69.5345429126792
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 618.64990234375,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 21.13,
+              "heatScore": 44.11,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "f0.40_v0.15_t0.25_th55",
+            "fear_weight": 0.4,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.25,
+            "repair_weight": 0.19999999999999996,
+            "bottom_threshold": 55,
+            "heat_threshold": 55,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 35.24566683218997,
+            "bottomDays": 8,
+            "heatDays": 74,
+            "transitions": 57,
+            "futureReturns": {
+              "bottom3mAvgPct": 25.661404973508372,
+              "bottom6mAvgPct": 34.80544586972971,
+              "bottom12mAvgPct": 55.31895471243104
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -1.5418040750519957,
+              "heat3mAvgMaxDrawdownPct": -7.713070763697706,
+              "heat6mAvgMaxDrawdownPct": -12.400949743788045
+            },
+            "reference": {
+              "strategyReturnPct": 163.86347098658217,
+              "buyHoldReturnPct": 233.26343738623243,
+              "excessReturnPct": -69.39996639965025
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 618.64990234375,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 31.13,
+              "heatScore": 44.04,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "f0.30_v0.15_t0.25_th60",
+            "fear_weight": 0.3,
+            "valuation_weight": 0.15,
+            "technical_weight": 0.25,
+            "repair_weight": 0.29999999999999993,
+            "bottom_threshold": 60,
+            "heat_threshold": 60,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 29.17102380442614,
+            "bottomDays": 1,
+            "heatDays": 6,
+            "transitions": 11,
+            "futureReturns": {
+              "bottom3mAvgPct": 22.771537649322603,
+              "bottom6mAvgPct": 35.229075210236125,
+              "bottom12mAvgPct": 62.00680509767664
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -0.7725930182171584,
+              "heat3mAvgMaxDrawdownPct": -1.8970372362152936,
+              "heat6mAvgMaxDrawdownPct": -3.934762798815722
+            },
+            "reference": {
+              "strategyReturnPct": 154.49487194081453,
+              "buyHoldReturnPct": 233.26343738623243,
+              "excessReturnPct": -78.7685654454179
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 618.64990234375,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 38.88,
+              "heatScore": 36.29,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        },
+        {
+          "config": {
+            "name": "balanced_zone_v1",
+            "fear_weight": 0.35,
+            "valuation_weight": 0.2,
+            "technical_weight": 0.3,
+            "repair_weight": 0.15,
+            "bottom_threshold": 55,
+            "heat_threshold": 55,
+            "conflict_gap": 15
+          },
+          "metrics": {
+            "score": 25.36922530537,
+            "bottomDays": 5,
+            "heatDays": 60,
+            "transitions": 39,
+            "futureReturns": {
+              "bottom3mAvgPct": 12.183479521589287,
+              "bottom6mAvgPct": 26.44600725551191,
+              "bottom12mAvgPct": 31.7821781589825
+            },
+            "futureDrawdowns": {
+              "heat1mAvgMaxDrawdownPct": -1.472712978996167,
+              "heat3mAvgMaxDrawdownPct": -9.422302014873061,
+              "heat6mAvgMaxDrawdownPct": -15.124463036663457
+            },
+            "reference": {
+              "strategyReturnPct": 164.80914023547655,
+              "buyHoldReturnPct": 233.26343738623243,
+              "excessReturnPct": -68.45429715075588
+            },
+            "latest": {
+              "date": "2025-12-30",
+              "close": 618.64990234375,
+              "action": "hold",
+              "degree": 0,
+              "bottomScore": 25.72,
+              "heatScore": 44.49,
+              "vix": 14.33,
+              "fearGreed": 46.11,
+              "cape": 39.42,
+              "trailingPE": 27.77
+            }
+          }
+        }
+      ]
+    }
+  },
+  "generatedAt": "2026-05-09T15:54:20.318769"
+}

@@ -28,6 +28,9 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
+# Research helper caches
+investigations/.cache/
+
 # Claude Code
 .review-result.md
 .audit-result.md
