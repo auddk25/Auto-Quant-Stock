@@ -54,6 +54,8 @@ class ResearchConfig:
     technical_weight: float
     repair_weight: float
     bottom_threshold: float
+    panic_bottom_threshold: float
+    pullback_bottom_threshold: float
     heat_threshold: float
     conflict_gap: float
 
@@ -65,6 +67,8 @@ class ResearchConfig:
             "technicalWeight": self.technical_weight,
             "repairWeight": self.repair_weight,
             "bottomThreshold": self.bottom_threshold,
+            "panicBottomThreshold": self.panic_bottom_threshold,
+            "pullbackBottomThreshold": self.pullback_bottom_threshold,
             "heatThreshold": self.heat_threshold,
             "conflictGap": self.conflict_gap,
             "rsiPeriod": 14,
@@ -83,6 +87,8 @@ DEFAULT_CONFIG = ResearchConfig(
     technical_weight=0.35,
     repair_weight=0.1,
     bottom_threshold=60,
+    panic_bottom_threshold=60,
+    pullback_bottom_threshold=60,
     heat_threshold=60,
     conflict_gap=15,
 )
@@ -92,6 +98,8 @@ MARKET_PHASES = {
     "2020_covid_crash": ("2020-02-19", "2020-04-30"),
     "2022_bear": ("2022-01-03", "2022-12-30"),
     "2024_2026_trend": ("2024-01-01", "2026-12-31"),
+    "2025_h2_pullback": ("2025-07-01", "2025-12-31"),
+    "2026_april_pullback": ("2026-04-01", "2026-04-30"),
 }
 
 
@@ -271,6 +279,8 @@ def build_dataset(symbol: str, refresh: bool = False) -> tuple[pd.DataFrame, dic
     df["ret20"] = close.pct_change(20) * 100
     df["ret60"] = close.pct_change(60) * 100
     df["dist_sma200"] = (close / df["sma200"] - 1) * 100
+    df["drawdown63"] = (close / close.rolling(63).max() - 1) * 100
+    df["drawdown126"] = (close / close.rolling(126).max() - 1) * 100
     df["vix_pct"] = rolling_percentile(df["vix"])
     df["skew_pct"] = rolling_percentile(df["skew"])
     df["cape_pct"] = rolling_percentile(df["cape"], 1200)
@@ -353,12 +363,34 @@ def score_zones(df: pd.DataFrame, cfg: ResearchConfig) -> pd.DataFrame:
         axis=1,
     ).mean(axis=1)
 
-    out["bottom_score"] = clamp(
+    weighted_bottom = clamp(
         cfg.fear_weight * clamp(fear_score)
         + cfg.valuation_weight * clamp(valuation_cheap)
         + cfg.technical_weight * clamp(oversold)
         + cfg.repair_weight * clamp(repair)
     )
+    out["panic_bottom_score"] = clamp(
+        0.55 * clamp(fear_score)
+        + 0.30 * clamp(oversold)
+        + 0.15 * clamp(valuation_cheap)
+    )
+    pullback_drawdown = pd.concat(
+        [-out["drawdown63"] * 10, -out["drawdown126"] * 8],
+        axis=1,
+    ).mean(axis=1)
+    pullback_raw = (
+        0.35 * clamp(pullback_drawdown)
+        + 0.20 * clamp(-out["ret20"] * 5)
+        + 0.20 * clamp((50 - out["rsi14"]) * 3)
+        + 0.15 * clamp((100 - fg).where(fg.notna(), out["vix_pct"]))
+        + 0.10 * clamp(-out["ret60"] * 3)
+    )
+    valuation_drag = np.maximum(0, clamp(valuation_hot) - 65) * 0.08
+    out["pullback_bottom_score"] = clamp(pullback_raw - valuation_drag)
+    out["bottom_score"] = pd.concat(
+        [weighted_bottom, out["panic_bottom_score"], out["pullback_bottom_score"]],
+        axis=1,
+    ).max(axis=1)
     out["heat_score"] = clamp(
         cfg.fear_weight * clamp(greed_score)
         + cfg.valuation_weight * clamp(valuation_hot)
@@ -366,18 +398,26 @@ def score_zones(df: pd.DataFrame, cfg: ResearchConfig) -> pd.DataFrame:
         + cfg.repair_weight * clamp(weakening)
     )
     out["action"] = "hold"
-    bottom_wins = (
-        (out["bottom_score"] >= cfg.bottom_threshold)
-        & ((out["bottom_score"] - out["heat_score"]) >= cfg.conflict_gap)
+    panic_wins = (
+        (out["panic_bottom_score"] >= cfg.panic_bottom_threshold)
+        | (
+            (out["bottom_score"] >= cfg.bottom_threshold)
+            & (out["panic_bottom_score"] >= out["pullback_bottom_score"])
+        )
     )
+    pullback_wins = out["pullback_bottom_score"] >= cfg.pullback_bottom_threshold
     heat_wins = (
         (out["heat_score"] >= cfg.heat_threshold)
         & ((out["heat_score"] - out["bottom_score"]) >= cfg.conflict_gap)
     )
-    out.loc[bottom_wins, "action"] = "dca_buy"
-    out.loc[heat_wins, "action"] = "dca_sell"
+    out.loc[panic_wins | pullback_wins, "action"] = "dca_buy"
+    out.loc[heat_wins & ~(panic_wins | pullback_wins), "action"] = "dca_sell"
+    out["bottom_kind"] = "none"
+    out.loc[panic_wins, "bottom_kind"] = "panic_bottom"
+    out.loc[pullback_wins & ~panic_wins, "bottom_kind"] = "pullback_bottom"
     out["degree"] = 0
-    active_score = out[["bottom_score", "heat_score"]].max(axis=1)
+    buy_score = out[["panic_bottom_score", "pullback_bottom_score", "bottom_score"]].max(axis=1)
+    active_score = np.where(out["action"] == "dca_buy", buy_score, out["heat_score"])
     out.loc[active_score >= 25, "degree"] = 25
     out.loc[active_score >= 40, "degree"] = 50
     out.loc[active_score >= 55, "degree"] = 75
@@ -427,15 +467,21 @@ def phase_summary(scored: pd.DataFrame) -> dict[str, dict[str, Any]]:
             continue
         bottom = phase["action"] == "dca_buy"
         heat = phase["action"] == "dca_sell"
+        panic_bottom = bottom & (phase["bottom_kind"] == "panic_bottom")
+        pullback_bottom = bottom & (phase["bottom_kind"] == "pullback_bottom")
         summary[name] = {
             "available": True,
             "start": phase.index.min().date().isoformat(),
             "end": phase.index.max().date().isoformat(),
             "bottomDays": int(bottom.sum()),
+            "panicBottomDays": int(panic_bottom.sum()),
+            "pullbackBottomDays": int(pullback_bottom.sum()),
             "heatDays": int(heat.sum()),
             "bottomCoveragePct": round(float(bottom.mean() * 100), 2),
             "heatCoveragePct": round(float(heat.mean() * 100), 2),
             "maxBottomScore": round(float(phase["bottom_score"].max()), 2),
+            "maxPanicBottomScore": round(float(phase["panic_bottom_score"].max()), 2),
+            "maxPullbackBottomScore": round(float(phase["pullback_bottom_score"].max()), 2),
             "maxHeatScore": round(float(phase["heat_score"].max()), 2),
         }
     return summary
@@ -461,6 +507,18 @@ def coverage_score(phases: dict[str, dict[str, Any]]) -> float:
         score += min(float(trend.get("bottomDays", 0)), 20) * 0.5
         score += min(float(trend.get("heatDays", 0)), 35) * 0.45
         score -= 10 if float(trend.get("heatDays", 0)) == 0 else 0
+    h2_2025 = phases.get("2025_h2_pullback", {})
+    if h2_2025.get("available"):
+        pullback_days = float(h2_2025.get("pullbackBottomDays", 0))
+        score += min(pullback_days, 18) * 1.2
+        score -= 120 if pullback_days == 0 else 0
+        score -= target_penalty(pullback_days, 3, 35, 0.8)
+    apr_2026 = phases.get("2026_april_pullback", {})
+    if apr_2026.get("available"):
+        pullback_days = float(apr_2026.get("pullbackBottomDays", 0))
+        score += min(pullback_days, 10) * 1.5
+        score -= 180 if pullback_days == 0 else 0
+        score -= target_penalty(pullback_days, 1, 18, 1.0)
     return score
 
 
@@ -468,6 +526,8 @@ def evaluate(df: pd.DataFrame, cfg: ResearchConfig) -> dict[str, Any]:
     scored = score_zones(df, cfg)
     transitions = scored["action"].ne(scored["action"].shift()).sum()
     bottom = scored["action"] == "dca_buy"
+    panic_bottom = bottom & (scored["bottom_kind"] == "panic_bottom")
+    pullback_bottom = bottom & (scored["bottom_kind"] == "pullback_bottom")
     heat = scored["action"] == "dca_sell"
     all_future_126 = future_return(scored["close"], 126)
     all_draw_63 = forward_drawdown(scored["close"], 63)
@@ -490,6 +550,8 @@ def evaluate(df: pd.DataFrame, cfg: ResearchConfig) -> dict[str, Any]:
     return {
         "score": float(score) if np.isfinite(score) else -999,
         "bottomDays": int(bottom.sum()),
+        "panicBottomDays": int(panic_bottom.sum()),
+        "pullbackBottomDays": int(pullback_bottom.sum()),
         "heatDays": int(heat.sum()),
         "transitions": int(transitions),
         "phaseCoverage": phases,
@@ -516,7 +578,10 @@ def latest_snapshot(scored: pd.DataFrame) -> dict[str, Any]:
         "action": row["action"],
         "degree": int(row["degree"]),
         "bottomScore": round(float(row["bottom_score"]), 2),
+        "panicBottomScore": round(float(row["panic_bottom_score"]), 2),
+        "pullbackBottomScore": round(float(row["pullback_bottom_score"]), 2),
         "heatScore": round(float(row["heat_score"]), 2),
+        "bottomKind": row["bottom_kind"],
         "vix": round(float(row["vix"]), 2),
         "fearGreed": None if pd.isna(row["fear_greed"]) else round(float(row["fear_greed"]), 2),
         "cape": None if pd.isna(row["cape"]) else round(float(row["cape"]), 2),
@@ -536,25 +601,30 @@ def candidate_configs() -> list[ResearchConfig]:
         (0.40, 0.20, 0.30, 0.10),
     ]
     for fear, valuation, tech, repair in weight_sets:
-        for bottom_threshold in [38, 42, 46, 50, 54, 58]:
-            for heat_threshold in [48, 52, 56, 60, 64]:
-                for conflict_gap in [5, 10, 15]:
-                    configs.append(
-                        ResearchConfig(
-                            name=(
-                                f"f{fear:.2f}_v{valuation:.2f}_t{tech:.2f}_r{repair:.2f}_"
-                                f"b{bottom_threshold}_h{heat_threshold}_g{conflict_gap}"
-                            ),
-                            fear_weight=fear,
-                            valuation_weight=valuation,
-                            technical_weight=tech,
-                            repair_weight=repair,
-                            bottom_threshold=bottom_threshold,
-                            heat_threshold=heat_threshold,
-                            conflict_gap=conflict_gap,
+        for bottom_threshold in [42, 46, 50]:
+            for panic_bottom_threshold in [46, 50, 54]:
+                for pullback_bottom_threshold in [34, 38, 42, 46]:
+                    for heat_threshold in [52, 56, 60]:
+                        for conflict_gap in [5, 10, 15]:
+                            configs.append(
+                                ResearchConfig(
+                                    name=(
+                                        f"f{fear:.2f}_v{valuation:.2f}_t{tech:.2f}_r{repair:.2f}_"
+                                        f"b{bottom_threshold}_p{panic_bottom_threshold}_"
+                                        f"pb{pullback_bottom_threshold}_h{heat_threshold}_g{conflict_gap}"
+                                    ),
+                                    fear_weight=fear,
+                                    valuation_weight=valuation,
+                                    technical_weight=tech,
+                                    repair_weight=repair,
+                                    bottom_threshold=bottom_threshold,
+                                    panic_bottom_threshold=panic_bottom_threshold,
+                                    pullback_bottom_threshold=pullback_bottom_threshold,
+                                    heat_threshold=heat_threshold,
+                                    conflict_gap=conflict_gap,
+                                )
                         )
-                    )
-    unique: dict[tuple[float, float, float, float, float, float, float], ResearchConfig] = {}
+    unique: dict[tuple[float, float, float, float, float, float, float, float, float], ResearchConfig] = {}
     for cfg in configs:
         key = (
             cfg.fear_weight,
@@ -562,6 +632,8 @@ def candidate_configs() -> list[ResearchConfig]:
             cfg.technical_weight,
             cfg.repair_weight,
             cfg.bottom_threshold,
+            cfg.panic_bottom_threshold,
+            cfg.pullback_bottom_threshold,
             cfg.heat_threshold,
             cfg.conflict_gap,
         )
@@ -648,7 +720,8 @@ def write_report(results: dict[str, Any]) -> None:
             "",
             "- It is selected by joint SPY/QQQ ranking, not by one symbol only.",
             "- The objective balances reference return, drawdown, zone coverage, transition count, and phase coverage.",
-            "- It requires both Bottom/Heat score level and a score gap, so conflicted days remain hold.",
+            "- Bottom is split into panic bottom and pullback bottom, so expensive markets can still produce DCA zones after clear drawdowns.",
+            "- The objective explicitly penalizes missing pullback DCA zones in 2025 H2 and 2026-04 while keeping heat zones in the 2024-2026 rally.",
             "",
             "Known limits:",
             "",
@@ -670,6 +743,8 @@ def write_report(results: dict[str, Any]) -> None:
                 f"- Excess return: {ref['excessReturnPct']:.2f}%",
                 f"- Max drawdown: {ref['maxDrawdownPct']:.2f}%",
                 f"- Bottom days: {metrics['bottomDays']}",
+                f"- Panic bottom days: {metrics['panicBottomDays']}",
+                f"- Pullback bottom days: {metrics['pullbackBottomDays']}",
                 f"- Heat days: {metrics['heatDays']}",
                 f"- Transitions: {metrics['transitions']}",
                 "",
@@ -681,6 +756,8 @@ def write_report(results: dict[str, Any]) -> None:
                 continue
             lines.append(
                 f"- {phase}: bottom {phase_payload['bottomDays']} days, "
+                f"panic {phase_payload['panicBottomDays']} days, "
+                f"pullback {phase_payload['pullbackBottomDays']} days, "
                 f"heat {phase_payload['heatDays']} days, "
                 f"max bottom {phase_payload['maxBottomScore']}, max heat {phase_payload['maxHeatScore']}"
             )
@@ -702,6 +779,8 @@ def write_report(results: dict[str, Any]) -> None:
                 f"- Excess return: {ref['excessReturnPct']:.2f}%",
                 f"- Max drawdown: {ref['maxDrawdownPct']:.2f}%",
                 f"- Bottom days: {best['metrics']['bottomDays']}",
+                f"- Panic bottom days: {best['metrics']['panicBottomDays']}",
+                f"- Pullback bottom days: {best['metrics']['pullbackBottomDays']}",
                 f"- Heat days: {best['metrics']['heatDays']}",
                 f"- Transitions: {best['metrics']['transitions']}",
                 "",
@@ -715,6 +794,8 @@ def write_report(results: dict[str, Any]) -> None:
                 continue
             lines.append(
                 f"- {phase}: bottom {phase_payload['bottomDays']} days, "
+                f"panic {phase_payload['panicBottomDays']} days, "
+                f"pullback {phase_payload['pullbackBottomDays']} days, "
                 f"heat {phase_payload['heatDays']} days, "
                 f"max bottom {phase_payload['maxBottomScore']}, max heat {phase_payload['maxHeatScore']}"
             )
@@ -748,7 +829,8 @@ def run(symbols: list[str], refresh: bool) -> dict[str, Any]:
         "marketPhases": MARKET_PHASES,
         "objective": (
             "combined SPY/QQQ score using reference return, buy-and-hold comparison, "
-            "max drawdown, zone count, phase coverage, transition count, and stability penalties"
+            "max drawdown, zone count, split panic/pullback bottom coverage, "
+            "2025 H2 / 2026-04 pullback requirements, heat coverage, transition count, and stability penalties"
         ),
     }
     output["recommendedDefault"] = combined[0]
@@ -772,6 +854,8 @@ def main() -> None:
     print(
         f"Recommended: {recommended['config']['name']} combined={recommended['combinedScore']:.2f} "
         f"bottom={recommended['webConfig']['bottomThreshold']} "
+        f"panic={recommended['webConfig']['panicBottomThreshold']} "
+        f"pullback={recommended['webConfig']['pullbackBottomThreshold']} "
         f"heat={recommended['webConfig']['heatThreshold']} gap={recommended['webConfig']['conflictGap']}"
     )
     for symbol, payload in result["symbols"].items():
