@@ -34,6 +34,11 @@ CNN_FG_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata/202
 SHILLER_URL = "https://posix4e.github.io/shiller_wrapper_data/data/stock_market_data.json"
 TRAILING_PE_URL = "https://www.stockmarketperatio.com/js/historical-sp-500-pe-ratio-since-1990.js"
 CURRENT_PE_URL = "https://www.stockmarketperatio.com"
+QQQ_PE_WARNING = 38
+VIX_PANIC_THRESHOLD = 30
+VIX_COMPLACENCY_THRESHOLD = 14
+FEAR_EXTREME_THRESHOLD = 20
+GREED_EXTREME_THRESHOLD = 80
 
 HTTP_HEADERS = {
     "User-Agent": (
@@ -44,6 +49,11 @@ HTTP_HEADERS = {
     "Origin": "https://www.cnn.com",
     "Referer": "https://www.cnn.com/markets/fear-and-greed",
 }
+
+
+def write_text_lf(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
 
 
 @dataclass
@@ -77,6 +87,11 @@ class ResearchConfig:
             "emaSlowDays": 50,
             "forwardPeLow": 18,
             "forwardPeHigh": 24,
+            "qqqPeWarning": QQQ_PE_WARNING,
+            "vixPanicThreshold": VIX_PANIC_THRESHOLD,
+            "vixComplacencyThreshold": VIX_COMPLACENCY_THRESHOLD,
+            "fearExtremeThreshold": FEAR_EXTREME_THRESHOLD,
+            "greedExtremeThreshold": GREED_EXTREME_THRESHOLD,
         }
 
 
@@ -229,6 +244,35 @@ def fetch_current_forward_pe(refresh: bool = False) -> dict[str, Any]:
     }
 
 
+def fetch_current_qqq_pe() -> dict[str, Any]:
+    try:
+        info = yf.Ticker("QQQ").get_info()
+        value = info.get("trailingPE")
+        numeric_value = float(value) if value is not None and math.isfinite(float(value)) else None
+        return {
+            "date": datetime.now(timezone.utc).date().isoformat(),
+            "value": numeric_value,
+            "source": "yfinance Yahoo Finance quoteSummary trailingPE for QQQ",
+            "methodology": "current trailing PE snapshot for QQQ ETF; not a historical series",
+            "historyAvailable": False,
+            "usage": "current_only_auxiliary_gate",
+            "threshold": QQQ_PE_WARNING,
+            "signal": "warning" if numeric_value is not None and numeric_value >= QQQ_PE_WARNING else "neutral",
+        }
+    except Exception as exc:
+        return {
+            "date": datetime.now(timezone.utc).date().isoformat(),
+            "value": None,
+            "source": "yfinance Yahoo Finance quoteSummary trailingPE for QQQ",
+            "methodology": "current trailing PE snapshot for QQQ ETF; not a historical series",
+            "historyAvailable": False,
+            "usage": "current_only_auxiliary_gate",
+            "threshold": QQQ_PE_WARNING,
+            "signal": "unavailable",
+            "error": str(exc),
+        }
+
+
 def rsi(close: pd.Series, period: int = 14) -> pd.Series:
     delta = close.diff()
     gain = delta.clip(lower=0).rolling(period).mean()
@@ -261,6 +305,7 @@ def build_dataset(symbol: str, refresh: bool = False) -> tuple[pd.DataFrame, dic
     cape = fetch_shiller_cape(refresh)
     trailing_pe = fetch_trailing_pe(refresh)
     forward_pe = fetch_current_forward_pe(refresh)
+    qqq_pe = fetch_current_qqq_pe()
 
     df = price.join([vix, vix3m, skew], how="left")
     df = df.join(fg, how="left")
@@ -299,6 +344,7 @@ def build_dataset(symbol: str, refresh: bool = False) -> tuple[pd.DataFrame, dic
         "capeRows": int(len(cape)),
         "trailingPeRows": int(len(trailing_pe)),
         "currentForwardPE": forward_pe,
+        "currentQQQPE": qqq_pe,
     }
     return df, meta
 
@@ -641,10 +687,16 @@ def candidate_configs() -> list[ResearchConfig]:
     return list(unique.values())
 
 
-def combined_rank(datasets: dict[str, pd.DataFrame], configs: list[ResearchConfig]) -> list[dict[str, Any]]:
+def combined_rank(
+    configs: list[ResearchConfig],
+    metrics_by_symbol: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
     ranked = []
-    for cfg in configs:
-        by_symbol = {symbol: evaluate(df, cfg) for symbol, df in datasets.items()}
+    for index, cfg in enumerate(configs):
+        by_symbol = {
+            symbol: metrics[index]
+            for symbol, metrics in metrics_by_symbol.items()
+        }
         scores = [payload["score"] for payload in by_symbol.values()]
         bottom_days = [payload["bottomDays"] for payload in by_symbol.values()]
         heat_days = [payload["heatDays"] for payload in by_symbol.values()]
@@ -704,9 +756,27 @@ def write_report(results: dict[str, Any]) -> None:
                 f"- Shiller CAPE rows: {meta['capeRows']}",
                 f"- Trailing PE rows: {meta['trailingPeRows']}",
                 f"- Current forward PE gate: {meta['currentForwardPE']}",
+                f"- Current QQQ PE auxiliary gate: {meta['currentQQQPE']}",
                 "",
             ]
         )
+    gates = results["auxiliaryGateDefaults"]
+    lines.extend(
+        [
+            "## Auxiliary valuation and sentiment gates",
+            "",
+            "These gates do not replace the panic bottom, pullback bottom, or heat model. They only adjust realtime interpretation, reason tags, and zone degree.",
+            "",
+            f"- QQQ PE warning: `{gates['currentOnly']['qqqPeWarning']}`. Source is the current yfinance/Yahoo trailing PE snapshot for QQQ. It is current-only because no stable free historical QQQ PE series was found in this workflow. It can reduce buy degree and increase sell confidence, but it must not fully block pullback bottom zones.",
+            f"- VIX panic: `{gates['historical']['vixPanicThreshold']}`. Historical VIX is available from Yahoo, so this can add a `vix_panic` reason tag and strengthen panic-bottom buy zones.",
+            f"- VIX complacency: `{gates['historical']['vixComplacencyThreshold']}`. Historical VIX is available from Yahoo, so this can add a `vix_complacency` reason tag and strengthen heat sell zones.",
+            f"- Fear & Greed extreme fear: `{gates['historical']['fearExtremeThreshold']}`. CNN history is available from 2021, so this can add a `fear_extreme` reason tag and strengthen panic-bottom buy zones where available.",
+            f"- Fear & Greed extreme greed: `{gates['historical']['greedExtremeThreshold']}`. CNN history is available from 2021, so this can add a `greed_extreme` reason tag and strengthen heat sell zones where available.",
+            "",
+            "Limit: QQQ PE is not included in the parameter search objective or historical score columns. Treat it as a current valuation warning layer only.",
+            "",
+        ]
+    )
     recommended = results["recommendedDefault"]
     lines.extend(
         [
@@ -727,6 +797,8 @@ def write_report(results: dict[str, Any]) -> None:
             "",
             "- Scores use free public data and daily bars; they are zone hints, not exact trade signals.",
             "- Forward PE has no reliable free history here, so it remains a current-only gate.",
+            "- The auxiliary gates are fixed, simple thresholds rather than a new fitted parameter grid. This is intentional to avoid overfitting VIX, Fear & Greed, or QQQ PE to a short recent sample.",
+            "- The selected main model is still the joint SPY/QQQ default, so one ticker or one market phase cannot dominate the Web defaults.",
             "- 2026 coverage is limited to the available latest data date.",
             "",
         ]
@@ -800,29 +872,29 @@ def write_report(results: dict[str, Any]) -> None:
                 f"max bottom {phase_payload['maxBottomScore']}, max heat {phase_payload['maxHeatScore']}"
             )
         lines.append("")
-    (OUT_DIR / "us_index_zone_report.md").write_text("\n".join(lines), encoding="utf-8")
+    write_text_lf(OUT_DIR / "us_index_zone_report.md", "\n".join(lines))
 
 
 def run(symbols: list[str], refresh: bool) -> dict[str, Any]:
     output: dict[str, Any] = {"symbols": {}, "generatedAt": datetime.now().isoformat()}
     configs = candidate_configs()
-    datasets: dict[str, pd.DataFrame] = {}
     metas: dict[str, dict[str, Any]] = {}
+    metrics_by_symbol: dict[str, list[dict[str, Any]]] = {}
     for symbol in symbols:
         df, meta = build_dataset(symbol, refresh)
-        datasets[symbol] = df
         metas[symbol] = meta
         ranked = []
         for cfg in configs:
             metrics = evaluate(df, cfg)
             ranked.append({"config": asdict(cfg), "webConfig": cfg.web_config(), "metrics": metrics})
+        metrics_by_symbol[symbol] = [item["metrics"] for item in ranked]
         ranked.sort(key=lambda item: item["metrics"]["score"], reverse=True)
         output["symbols"][symbol] = {
             "dataMeta": meta,
             "best": ranked[0],
             "topConfigs": ranked[:10],
         }
-    combined = combined_rank(datasets, configs)
+    combined = combined_rank(configs, metrics_by_symbol)
     output["searchSpace"] = {
         "configCount": len(configs),
         "symbols": symbols,
@@ -833,11 +905,26 @@ def run(symbols: list[str], refresh: bool) -> dict[str, Any]:
             "2025 H2 / 2026-04 pullback requirements, heat coverage, transition count, and stability penalties"
         ),
     }
+    output["auxiliaryGateDefaults"] = {
+        "historical": {
+            "vixPanicThreshold": VIX_PANIC_THRESHOLD,
+            "vixComplacencyThreshold": VIX_COMPLACENCY_THRESHOLD,
+            "fearExtremeThreshold": FEAR_EXTREME_THRESHOLD,
+            "greedExtremeThreshold": GREED_EXTREME_THRESHOLD,
+            "usage": "historical_reason_tags_and_degree_enhancers",
+        },
+        "currentOnly": {
+            "qqqPeWarning": QQQ_PE_WARNING,
+            "usage": "current_realtime_auxiliary_gate_only",
+            "historicalScoring": False,
+        },
+    }
     output["recommendedDefault"] = combined[0]
     output["combinedTopConfigs"] = combined[:25]
     output = json_safe(output)
-    (OUT_DIR / "us_index_zone_results.json").write_text(
-        json.dumps(output, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8"
+    write_text_lf(
+        OUT_DIR / "us_index_zone_results.json",
+        json.dumps(output, ensure_ascii=False, indent=2, allow_nan=False),
     )
     write_report(output)
     return output

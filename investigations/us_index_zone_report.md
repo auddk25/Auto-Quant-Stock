@@ -1,6 +1,6 @@
 # US Index Zone Research Report
 
-Generated: 2026-05-09T18:34:08
+Generated: 2026-05-09T21:45:47
 
 ## Data availability
 
@@ -13,6 +13,7 @@ Generated: 2026-05-09T18:34:08
 - Shiller CAPE rows: 1740
 - Trailing PE rows: 437
 - Current forward PE gate: {'date': '2026-04-30', 'forwardPE': 24.98, 'trailingPE': 28.25, 'historyAvailable': False, 'usage': 'current_only_gate'}
+- Current QQQ PE auxiliary gate: {'date': '2026-05-09', 'value': 34.694794, 'source': 'yfinance Yahoo Finance quoteSummary trailingPE for QQQ', 'methodology': 'current trailing PE snapshot for QQQ ETF; not a historical series', 'historyAvailable': False, 'usage': 'current_only_auxiliary_gate', 'threshold': 38, 'signal': 'neutral'}
 
 ### QQQ
 
@@ -23,12 +24,25 @@ Generated: 2026-05-09T18:34:08
 - Shiller CAPE rows: 1740
 - Trailing PE rows: 437
 - Current forward PE gate: {'date': '2026-04-30', 'forwardPE': 24.98, 'trailingPE': 28.25, 'historyAvailable': False, 'usage': 'current_only_gate'}
+- Current QQQ PE auxiliary gate: {'date': '2026-05-09', 'value': 34.694794, 'source': 'yfinance Yahoo Finance quoteSummary trailingPE for QQQ', 'methodology': 'current trailing PE snapshot for QQQ ETF; not a historical series', 'historyAvailable': False, 'usage': 'current_only_auxiliary_gate', 'threshold': 38, 'signal': 'neutral'}
+
+## Auxiliary valuation and sentiment gates
+
+These gates do not replace the panic bottom, pullback bottom, or heat model. They only adjust realtime interpretation, reason tags, and zone degree.
+
+- QQQ PE warning: `38`. Source is the current yfinance/Yahoo trailing PE snapshot for QQQ. It is current-only because no stable free historical QQQ PE series was found in this workflow. It can reduce buy degree and increase sell confidence, but it must not fully block pullback bottom zones.
+- VIX panic: `30`. Historical VIX is available from Yahoo, so this can add a `vix_panic` reason tag and strengthen panic-bottom buy zones.
+- VIX complacency: `14`. Historical VIX is available from Yahoo, so this can add a `vix_complacency` reason tag and strengthen heat sell zones.
+- Fear & Greed extreme fear: `20`. CNN history is available from 2021, so this can add a `fear_extreme` reason tag and strengthen panic-bottom buy zones where available.
+- Fear & Greed extreme greed: `80`. CNN history is available from 2021, so this can add a `greed_extreme` reason tag and strengthen heat sell zones where available.
+
+Limit: QQQ PE is not included in the parameter search objective or historical score columns. Treat it as a current valuation warning layer only.
 
 ## Recommended default
 
 - Config: `f0.30_v0.15_t0.40_r0.15_b50_p50_pb34_h52_g5`
 - Combined score: -42.03
-- Web config: `{"name": "USIndexZoneResearchOpt", "fearWeight": 0.3, "valuationWeight": 0.15, "technicalWeight": 0.4, "repairWeight": 0.15, "bottomThreshold": 50, "panicBottomThreshold": 50, "pullbackBottomThreshold": 34, "heatThreshold": 52, "conflictGap": 5, "rsiPeriod": 14, "smaLongDays": 200, "emaFastDays": 20, "emaSlowDays": 50, "forwardPeLow": 18, "forwardPeHigh": 24}`
+- Web config: `{"name": "USIndexZoneResearchOpt", "fearWeight": 0.3, "valuationWeight": 0.15, "technicalWeight": 0.4, "repairWeight": 0.15, "bottomThreshold": 50, "panicBottomThreshold": 50, "pullbackBottomThreshold": 34, "heatThreshold": 52, "conflictGap": 5, "rsiPeriod": 14, "smaLongDays": 200, "emaFastDays": 20, "emaSlowDays": 50, "forwardPeLow": 18, "forwardPeHigh": 24, "qqqPeWarning": 38, "vixPanicThreshold": 30, "vixComplacencyThreshold": 14, "fearExtremeThreshold": 20, "greedExtremeThreshold": 80}`
 
 Why this one:
 
@@ -41,6 +55,8 @@ Known limits:
 
 - Scores use free public data and daily bars; they are zone hints, not exact trade signals.
 - Forward PE has no reliable free history here, so it remains a current-only gate.
+- The auxiliary gates are fixed, simple thresholds rather than a new fitted parameter grid. This is intentional to avoid overfitting VIX, Fear & Greed, or QQQ PE to a short recent sample.
+- The selected main model is still the joint SPY/QQQ default, so one ticker or one market phase cannot dominate the Web defaults.
 - 2026 coverage is limited to the available latest data date.
 
 ### Recommended default trigger coverage

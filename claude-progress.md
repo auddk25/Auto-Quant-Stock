@@ -37,3 +37,16 @@ EMA_Mom provides 23% less drawdown (-61.3% vs -84.6%) but 63% lower returns.
 
 ## Experiments Completed: 38
 ## Results: See `results.tsv` and `docs/analysis_report_apr29.md`
+
+== Session: 2026-05-09 US Index auxiliary gates ==
+## Completed
+- Extended `investigations/us_index_zone_research.py` to report auxiliary valuation/sentiment gates for the Web app without modifying `run.py` or `config.py`.
+- Verified current QQQ PE through yfinance/Yahoo as a current-only trailing PE snapshot; no reliable free historical QQQ PE series is used in backtest scoring.
+- Kept the existing joint SPY/QQQ default parameters unchanged to avoid overfitting; auxiliary VIX/Fear/QQQ PE gates are fixed explanatory thresholds, not a new fitted grid.
+- Regenerated `investigations/us_index_zone_results.json` and `investigations/us_index_zone_report.md`.
+
+## Current Web thresholds
+- QQQ PE warning: 38
+- VIX panic/complacency: 30 / 14
+- Fear & Greed extreme fear/greed: 20 / 80
+==

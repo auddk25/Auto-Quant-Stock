@@ -17,6 +17,16 @@
           "trailingPE": 28.25,
           "historyAvailable": false,
           "usage": "current_only_gate"
+        },
+        "currentQQQPE": {
+          "date": "2026-05-09",
+          "value": 34.694794,
+          "source": "yfinance Yahoo Finance quoteSummary trailingPE for QQQ",
+          "methodology": "current trailing PE snapshot for QQQ ETF; not a historical series",
+          "historyAvailable": false,
+          "usage": "current_only_auxiliary_gate",
+          "threshold": 38,
+          "signal": "neutral"
         }
       },
       "best": {
@@ -48,7 +58,12 @@
           "emaFastDays": 20,
           "emaSlowDays": 50,
           "forwardPeLow": 18,
-          "forwardPeHigh": 24
+          "forwardPeHigh": 24,
+          "qqqPeWarning": 38,
+          "vixPanicThreshold": 30,
+          "vixComplacencyThreshold": 14,
+          "fearExtremeThreshold": 20,
+          "greedExtremeThreshold": 80
         },
         "metrics": {
           "score": -10.089597771264255,
@@ -212,7 +227,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.089597771264255,
@@ -375,7 +395,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.089597771264255,
@@ -538,7 +563,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.089597771264255,
@@ -701,7 +731,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.089597771264255,
@@ -864,7 +899,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.089597771264255,
@@ -1027,7 +1067,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.089597771264255,
@@ -1190,7 +1235,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.167064578828903,
@@ -1353,7 +1403,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.167064578828903,
@@ -1516,7 +1571,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.167064578828903,
@@ -1679,7 +1739,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -10.167064578828903,
@@ -1832,6 +1897,16 @@
           "trailingPE": 28.25,
           "historyAvailable": false,
           "usage": "current_only_gate"
+        },
+        "currentQQQPE": {
+          "date": "2026-05-09",
+          "value": 34.694794,
+          "source": "yfinance Yahoo Finance quoteSummary trailingPE for QQQ",
+          "methodology": "current trailing PE snapshot for QQQ ETF; not a historical series",
+          "historyAvailable": false,
+          "usage": "current_only_auxiliary_gate",
+          "threshold": 38,
+          "signal": "neutral"
         }
       },
       "best": {
@@ -1863,7 +1938,12 @@
           "emaFastDays": 20,
           "emaSlowDays": 50,
           "forwardPeLow": 18,
-          "forwardPeHigh": 24
+          "forwardPeHigh": 24,
+          "qqqPeWarning": 38,
+          "vixPanicThreshold": 30,
+          "vixComplacencyThreshold": 14,
+          "fearExtremeThreshold": 20,
+          "greedExtremeThreshold": 80
         },
         "metrics": {
           "score": -14.49885564091638,
@@ -2027,7 +2107,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -14.49885564091638,
@@ -2190,7 +2275,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -14.49885564091638,
@@ -2353,7 +2443,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -14.49885564091638,
@@ -2516,7 +2611,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -14.49885564091638,
@@ -2679,7 +2779,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -14.49885564091638,
@@ -2842,7 +2947,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -14.49885564091638,
@@ -3005,7 +3115,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -15.459373345368927,
@@ -3168,7 +3283,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -15.459373345368927,
@@ -3331,7 +3451,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -15.459373345368927,
@@ -3494,7 +3619,12 @@
             "emaFastDays": 20,
             "emaSlowDays": 50,
             "forwardPeLow": 18,
-            "forwardPeHigh": 24
+            "forwardPeHigh": 24,
+            "qqqPeWarning": 38,
+            "vixPanicThreshold": 30,
+            "vixComplacencyThreshold": 14,
+            "fearExtremeThreshold": 20,
+            "greedExtremeThreshold": 80
           },
           "metrics": {
             "score": -15.459373345368927,
@@ -3631,7 +3761,7 @@
       ]
     }
   },
-  "generatedAt": "2026-05-09T18:26:58.214020",
+  "generatedAt": "2026-05-09T21:35:52.984756",
   "searchSpace": {
     "configCount": 2269,
     "symbols": [
@@ -3666,6 +3796,20 @@
     },
     "objective": "combined SPY/QQQ score using reference return, buy-and-hold comparison, max drawdown, zone count, split panic/pullback bottom coverage, 2025 H2 / 2026-04 pullback requirements, heat coverage, transition count, and stability penalties"
   },
+  "auxiliaryGateDefaults": {
+    "historical": {
+      "vixPanicThreshold": 30,
+      "vixComplacencyThreshold": 14,
+      "fearExtremeThreshold": 20,
+      "greedExtremeThreshold": 80,
+      "usage": "historical_reason_tags_and_degree_enhancers"
+    },
+    "currentOnly": {
+      "qqqPeWarning": 38,
+      "usage": "current_realtime_auxiliary_gate_only",
+      "historicalScoring": false
+    }
+  },
   "recommendedDefault": {
     "config": {
       "name": "f0.30_v0.15_t0.40_r0.15_b50_p50_pb34_h52_g5",
@@ -3695,7 +3839,12 @@
       "emaFastDays": 20,
       "emaSlowDays": 50,
       "forwardPeLow": 18,
-      "forwardPeHigh": 24
+      "forwardPeHigh": 24,
+      "qqqPeWarning": 38,
+      "vixPanicThreshold": 30,
+      "vixComplacencyThreshold": 14,
+      "fearExtremeThreshold": 20,
+      "greedExtremeThreshold": 80
     },
     "combinedScore": -42.03200715198092,
     "symbols": {
@@ -3993,7 +4142,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.03200715198092,
       "symbols": {
@@ -4290,7 +4444,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.03200715198092,
       "symbols": {
@@ -4587,7 +4746,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.03200715198092,
       "symbols": {
@@ -4884,7 +5048,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.03200715198092,
       "symbols": {
@@ -5181,7 +5350,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.03200715198092,
       "symbols": {
@@ -5478,7 +5652,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.03200715198092,
       "symbols": {
@@ -5775,7 +5954,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.13114956511117,
       "symbols": {
@@ -6072,7 +6256,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.13114956511117,
       "symbols": {
@@ -6369,7 +6558,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.13114956511117,
       "symbols": {
@@ -6666,7 +6860,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.13114956511117,
       "symbols": {
@@ -6963,7 +7162,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.13114956511117,
       "symbols": {
@@ -7260,7 +7464,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.13114956511117,
       "symbols": {
@@ -7557,7 +7766,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.540480267149974,
       "symbols": {
@@ -7854,7 +8068,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.540480267149974,
       "symbols": {
@@ -8151,7 +8370,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.540480267149974,
       "symbols": {
@@ -8448,7 +8672,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.540480267149974,
       "symbols": {
@@ -8745,7 +8974,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.540480267149974,
       "symbols": {
@@ -9042,7 +9276,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.540480267149974,
       "symbols": {
@@ -9339,7 +9578,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.884287880417034,
       "symbols": {
@@ -9636,7 +9880,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.884287880417034,
       "symbols": {
@@ -9933,7 +10182,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.884287880417034,
       "symbols": {
@@ -10230,7 +10484,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.884287880417034,
       "symbols": {
@@ -10527,7 +10786,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.884287880417034,
       "symbols": {
@@ -10824,7 +11088,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -42.884287880417034,
       "symbols": {
@@ -11121,7 +11390,12 @@
         "emaFastDays": 20,
         "emaSlowDays": 50,
         "forwardPeLow": 18,
-        "forwardPeHigh": 24
+        "forwardPeHigh": 24,
+        "qqqPeWarning": 38,
+        "vixPanicThreshold": 30,
+        "vixComplacencyThreshold": 14,
+        "fearExtremeThreshold": 20,
+        "greedExtremeThreshold": 80
       },
       "combinedScore": -43.043269348206124,
       "symbols": {
