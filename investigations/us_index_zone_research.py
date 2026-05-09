@@ -29,7 +29,7 @@ OUT_DIR = ROOT / "investigations"
 CACHE_DIR = OUT_DIR / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
-START_DATE = "2019-01-01"
+START_DATE = "2017-01-01"
 CNN_FG_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata/2021-01-01"
 SHILLER_URL = "https://posix4e.github.io/shiller_wrapper_data/data/stock_market_data.json"
 TRAILING_PE_URL = "https://www.stockmarketperatio.com/js/historical-sp-500-pe-ratio-since-1990.js"
@@ -57,17 +57,42 @@ class ResearchConfig:
     heat_threshold: float
     conflict_gap: float
 
+    def web_config(self) -> dict[str, float | str | int]:
+        return {
+            "name": "USIndexZoneResearchOpt",
+            "fearWeight": self.fear_weight,
+            "valuationWeight": self.valuation_weight,
+            "technicalWeight": self.technical_weight,
+            "repairWeight": self.repair_weight,
+            "bottomThreshold": self.bottom_threshold,
+            "heatThreshold": self.heat_threshold,
+            "conflictGap": self.conflict_gap,
+            "rsiPeriod": 14,
+            "smaLongDays": 200,
+            "emaFastDays": 20,
+            "emaSlowDays": 50,
+            "forwardPeLow": 18,
+            "forwardPeHigh": 24,
+        }
+
 
 DEFAULT_CONFIG = ResearchConfig(
     name="balanced_zone_v1",
-    fear_weight=0.35,
-    valuation_weight=0.2,
-    technical_weight=0.3,
-    repair_weight=0.15,
-    bottom_threshold=55,
-    heat_threshold=55,
+    fear_weight=0.4,
+    valuation_weight=0.15,
+    technical_weight=0.35,
+    repair_weight=0.1,
+    bottom_threshold=60,
+    heat_threshold=60,
     conflict_gap=15,
 )
+
+MARKET_PHASES = {
+    "2018_drawdown": ("2018-09-20", "2018-12-31"),
+    "2020_covid_crash": ("2020-02-19", "2020-04-30"),
+    "2022_bear": ("2022-01-03", "2022-12-30"),
+    "2024_2026_trend": ("2024-01-01", "2026-12-31"),
+}
 
 
 def fetch_text(url: str, cache_name: str, refresh: bool = False) -> str:
@@ -84,7 +109,7 @@ def fetch_text(url: str, cache_name: str, refresh: bool = False) -> str:
 def load_local_price(symbol: str) -> pd.DataFrame:
     path = DATA_DIR / f"{symbol}.parquet"
     if not path.exists():
-        raise FileNotFoundError(f"Missing {path}; run uv run prepare.py first")
+        return pd.DataFrame()
     df = pd.read_parquet(path).copy()
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
@@ -94,9 +119,31 @@ def load_local_price(symbol: str) -> pd.DataFrame:
     return df
 
 
+def fetch_price(symbol: str, refresh: bool = False) -> tuple[pd.DataFrame, str]:
+    cache_path = CACHE_DIR / f"{symbol.lower()}_price.parquet"
+    if cache_path.exists() and not refresh:
+        return pd.read_parquet(cache_path), "yfinance-cache"
+
+    end = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+    df = yf.download(symbol, start=START_DATE, end=end, auto_adjust=True, progress=False)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    if not df.empty:
+        df.index = pd.to_datetime(df.index).tz_localize(None)
+        df = df[["Open", "High", "Low", "Close", "Volume"]].dropna()
+        df.columns = [c.lower() for c in df.columns]
+        df.to_parquet(cache_path)
+        return df, "yfinance"
+
+    local = load_local_price(symbol)
+    if local.empty:
+        raise FileNotFoundError(f"Missing price data for {symbol}; yfinance and local parquet failed")
+    return local, "local-parquet"
+
+
 def fetch_yahoo(symbol: str, refresh: bool = False) -> pd.DataFrame:
     safe = symbol.replace("^", "")
-    cache_path = CACHE_DIR / f"{safe}.parquet"
+    cache_path = CACHE_DIR / f"{safe}_{START_DATE}.parquet"
     if cache_path.exists() and not refresh:
         return pd.read_parquet(cache_path)
     end = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -198,7 +245,7 @@ def clamp(series: pd.Series | float, low: float = 0, high: float = 100):
 
 
 def build_dataset(symbol: str, refresh: bool = False) -> tuple[pd.DataFrame, dict[str, Any]]:
-    price = load_local_price(symbol)
+    price, price_source = fetch_price(symbol, refresh)
     vix = fetch_yahoo("^VIX", refresh)
     vix3m = fetch_yahoo("^VIX3M", refresh)
     skew = fetch_yahoo("^SKEW", refresh)
@@ -233,6 +280,9 @@ def build_dataset(symbol: str, refresh: bool = False) -> tuple[pd.DataFrame, dic
 
     meta = {
         "priceRows": int(len(price)),
+        "priceSource": price_source,
+        "priceStart": price.index.min().date().isoformat() if len(price) else None,
+        "priceEnd": price.index.max().date().isoformat() if len(price) else None,
         "start": df.index.min().date().isoformat() if len(df) else None,
         "end": df.index.max().date().isoformat() if len(df) else None,
         "cnnFearGreedRows": int(len(fg)),
@@ -251,6 +301,7 @@ def score_zones(df: pd.DataFrame, cfg: ResearchConfig) -> pd.DataFrame:
             out["vix_pct"],
             (100 - fg).where(fg.notna(), out["vix_pct"]),
             ((out["vix_curve"] - 0.85) / 0.35 * 100),
+            out["skew_pct"] * 0.7,
         ],
         axis=1,
     ).mean(axis=1)
@@ -271,7 +322,7 @@ def score_zones(df: pd.DataFrame, cfg: ResearchConfig) -> pd.DataFrame:
     oversold = pd.concat(
         [
             (50 - out["rsi14"]) * 2,
-            -out["ret20"] * 2,
+            -out["ret20"] * 3,
             -out["dist_sma200"] * 2,
         ],
         axis=1,
@@ -279,28 +330,28 @@ def score_zones(df: pd.DataFrame, cfg: ResearchConfig) -> pd.DataFrame:
     overbought = pd.concat(
         [
             (out["rsi14"] - 55) * 2,
-            out["ret60"],
-            out["dist_sma200"] * 1.5,
+            out["ret60"] * 2,
+            out["dist_sma200"] * 2,
         ],
         axis=1,
     ).mean(axis=1)
 
     repair = pd.concat(
         [
-            (out["close"] > out["ema20"]).astype(float) * 35,
-            (out["ema20"] > out["ema50"]).astype(float) * 35,
-            (out["ret20"] > 0).astype(float) * 30,
+            (out["close"] > out["ema20"]).astype(float) * 100,
+            (out["ema20"] > out["ema50"]).astype(float) * 100,
+            (out["ret20"] > 0).astype(float) * 100,
         ],
         axis=1,
-    ).sum(axis=1)
+    ).mean(axis=1)
     weakening = pd.concat(
         [
-            (out["close"] < out["ema20"]).astype(float) * 35,
-            (out["ema20"] < out["ema50"]).astype(float) * 35,
-            (out["ret20"] < 0).astype(float) * 30,
+            (out["close"] < out["ema20"]).astype(float) * 100,
+            (out["ema20"] < out["ema50"]).astype(float) * 100,
+            (out["ret20"] < 0).astype(float) * 100,
         ],
         axis=1,
-    ).sum(axis=1)
+    ).mean(axis=1)
 
     out["bottom_score"] = clamp(
         cfg.fear_weight * clamp(fear_score)
@@ -354,13 +405,63 @@ def forward_drawdown(close: pd.Series, days: int) -> pd.Series:
 def reference_return(df: pd.DataFrame) -> dict[str, float]:
     exposure = np.where(df["action"] == "dca_buy", 1.0, np.where(df["action"] == "dca_sell", 0.5, 0.75))
     daily = df["close"].pct_change().fillna(0).to_numpy()
-    equity = float(np.prod(1 + exposure[:-1] * daily[1:]))
+    curve = np.cumprod(1 + exposure[:-1] * daily[1:])
+    equity = float(curve[-1]) if len(curve) else 1.0
     hold = float(df["close"].iloc[-1] / df["close"].iloc[0])
+    peak = np.maximum.accumulate(curve) if len(curve) else np.array([1.0])
+    max_drawdown = float(np.min(curve / peak - 1) * 100) if len(curve) else 0.0
     return {
         "strategyReturnPct": (equity - 1) * 100,
         "buyHoldReturnPct": (hold - 1) * 100,
         "excessReturnPct": (equity - hold) * 100,
+        "maxDrawdownPct": max_drawdown,
     }
+
+
+def phase_summary(scored: pd.DataFrame) -> dict[str, dict[str, Any]]:
+    summary: dict[str, dict[str, Any]] = {}
+    for name, (start, end) in MARKET_PHASES.items():
+        phase = scored.loc[start:end]
+        if phase.empty:
+            summary[name] = {"available": False}
+            continue
+        bottom = phase["action"] == "dca_buy"
+        heat = phase["action"] == "dca_sell"
+        summary[name] = {
+            "available": True,
+            "start": phase.index.min().date().isoformat(),
+            "end": phase.index.max().date().isoformat(),
+            "bottomDays": int(bottom.sum()),
+            "heatDays": int(heat.sum()),
+            "bottomCoveragePct": round(float(bottom.mean() * 100), 2),
+            "heatCoveragePct": round(float(heat.mean() * 100), 2),
+            "maxBottomScore": round(float(phase["bottom_score"].max()), 2),
+            "maxHeatScore": round(float(phase["heat_score"].max()), 2),
+        }
+    return summary
+
+
+def target_penalty(value: float, low: float, high: float, scale: float) -> float:
+    if value < low:
+        return (low - value) * scale
+    if value > high:
+        return (value - high) * scale
+    return 0.0
+
+
+def coverage_score(phases: dict[str, dict[str, Any]]) -> float:
+    score = 0.0
+    for name in ["2018_drawdown", "2020_covid_crash", "2022_bear"]:
+        phase = phases.get(name, {})
+        if phase.get("available"):
+            score += min(float(phase.get("bottomDays", 0)), 20) * 0.8
+            score -= 16 if float(phase.get("bottomDays", 0)) == 0 else 0
+    trend = phases.get("2024_2026_trend", {})
+    if trend.get("available"):
+        score += min(float(trend.get("bottomDays", 0)), 20) * 0.5
+        score += min(float(trend.get("heatDays", 0)), 35) * 0.45
+        score -= 10 if float(trend.get("heatDays", 0)) == 0 else 0
+    return score
 
 
 def evaluate(df: pd.DataFrame, cfg: ResearchConfig) -> dict[str, Any]:
@@ -374,17 +475,24 @@ def evaluate(df: pd.DataFrame, cfg: ResearchConfig) -> dict[str, Any]:
     heat_draw_63 = all_draw_63[heat].mean()
     ordinary_return_126 = all_future_126[~bottom].mean()
     ordinary_draw_63 = all_draw_63[~heat].mean()
+    ref = reference_return(scored)
+    phases = phase_summary(scored)
     score = (
         (bottom_return_126 - ordinary_return_126) * 1.4
         + (ordinary_draw_63 - heat_draw_63) * 1.1
-        - max(0, transitions - 80) * 0.1
-        - max(0, 8 - transitions) * 2
+        + min(ref["excessReturnPct"], 30) * 0.25
+        + max(0, ref["maxDrawdownPct"] + 35) * 0.35
+        + coverage_score(phases)
+        - target_penalty(int(bottom.sum()), 12, 260, 0.25)
+        - target_penalty(int(heat.sum()), 20, 420, 0.16)
+        - target_penalty(int(transitions), 8, 140, 0.35)
     )
     return {
         "score": float(score) if np.isfinite(score) else -999,
         "bottomDays": int(bottom.sum()),
         "heatDays": int(heat.sum()),
         "transitions": int(transitions),
+        "phaseCoverage": phases,
         "futureReturns": {
             "bottom3mAvgPct": float(future_return(scored["close"], 63)[bottom].mean()),
             "bottom6mAvgPct": float(bottom_return_126),
@@ -395,7 +503,7 @@ def evaluate(df: pd.DataFrame, cfg: ResearchConfig) -> dict[str, Any]:
             "heat3mAvgMaxDrawdownPct": float(heat_draw_63),
             "heat6mAvgMaxDrawdownPct": float(forward_drawdown(scored["close"], 126)[heat].mean()),
         },
-        "reference": reference_return(scored),
+        "reference": ref,
         "latest": latest_snapshot(scored),
     }
 
@@ -418,24 +526,88 @@ def latest_snapshot(scored: pd.DataFrame) -> dict[str, Any]:
 
 def candidate_configs() -> list[ResearchConfig]:
     configs = [DEFAULT_CONFIG]
-    for fear in [0.3, 0.4]:
-        for valuation in [0.15, 0.25]:
-            for tech in [0.25, 0.35]:
-                repair = max(0.05, 1 - fear - valuation - tech)
-                for threshold in [50, 55, 60]:
+    weight_sets = [
+        (0.35, 0.20, 0.30, 0.15),
+        (0.40, 0.15, 0.35, 0.10),
+        (0.45, 0.15, 0.30, 0.10),
+        (0.30, 0.25, 0.30, 0.15),
+        (0.30, 0.15, 0.40, 0.15),
+        (0.35, 0.15, 0.35, 0.15),
+        (0.40, 0.20, 0.30, 0.10),
+    ]
+    for fear, valuation, tech, repair in weight_sets:
+        for bottom_threshold in [38, 42, 46, 50, 54, 58]:
+            for heat_threshold in [48, 52, 56, 60, 64]:
+                for conflict_gap in [5, 10, 15]:
                     configs.append(
                         ResearchConfig(
-                            name=f"f{fear:.2f}_v{valuation:.2f}_t{tech:.2f}_th{threshold}",
+                            name=(
+                                f"f{fear:.2f}_v{valuation:.2f}_t{tech:.2f}_r{repair:.2f}_"
+                                f"b{bottom_threshold}_h{heat_threshold}_g{conflict_gap}"
+                            ),
                             fear_weight=fear,
                             valuation_weight=valuation,
                             technical_weight=tech,
                             repair_weight=repair,
-                            bottom_threshold=threshold,
-                            heat_threshold=threshold,
-                            conflict_gap=15,
+                            bottom_threshold=bottom_threshold,
+                            heat_threshold=heat_threshold,
+                            conflict_gap=conflict_gap,
                         )
                     )
-    return configs
+    unique: dict[tuple[float, float, float, float, float, float, float], ResearchConfig] = {}
+    for cfg in configs:
+        key = (
+            cfg.fear_weight,
+            cfg.valuation_weight,
+            cfg.technical_weight,
+            cfg.repair_weight,
+            cfg.bottom_threshold,
+            cfg.heat_threshold,
+            cfg.conflict_gap,
+        )
+        unique[key] = cfg
+    return list(unique.values())
+
+
+def combined_rank(datasets: dict[str, pd.DataFrame], configs: list[ResearchConfig]) -> list[dict[str, Any]]:
+    ranked = []
+    for cfg in configs:
+        by_symbol = {symbol: evaluate(df, cfg) for symbol, df in datasets.items()}
+        scores = [payload["score"] for payload in by_symbol.values()]
+        bottom_days = [payload["bottomDays"] for payload in by_symbol.values()]
+        heat_days = [payload["heatDays"] for payload in by_symbol.values()]
+        excess = [payload["reference"]["excessReturnPct"] for payload in by_symbol.values()]
+        stability_penalty = (
+            (max(scores) - min(scores)) * 0.18
+            + abs(max(bottom_days) - min(bottom_days)) * 0.04
+            + abs(max(heat_days) - min(heat_days)) * 0.025
+            + abs(max(excess) - min(excess)) * 0.08
+        )
+        combined_score = float(np.mean(scores) - stability_penalty)
+        ranked.append(
+            {
+                "config": asdict(cfg),
+                "webConfig": cfg.web_config(),
+                "combinedScore": combined_score,
+                "symbols": by_symbol,
+            }
+        )
+    ranked.sort(key=lambda item: item["combinedScore"], reverse=True)
+    return ranked
+
+
+def json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [json_safe(item) for item in value]
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (np.floating, float)):
+        return float(value) if math.isfinite(float(value)) else None
+    return value
 
 
 def write_report(results: dict[str, Any]) -> None:
@@ -453,6 +625,7 @@ def write_report(results: dict[str, Any]) -> None:
             [
                 f"### {symbol}",
                 "",
+                f"- Price source: {meta['priceSource']} ({meta['priceStart']} to {meta['priceEnd']})",
                 f"- Price rows: {meta['priceRows']}",
                 f"- Research window: {meta['start']} to {meta['end']}",
                 f"- CNN Fear & Greed rows: {meta['cnnFearGreedRows']}",
@@ -462,7 +635,57 @@ def write_report(results: dict[str, Any]) -> None:
                 "",
             ]
         )
-    lines.extend(["## Best configs", ""])
+    recommended = results["recommendedDefault"]
+    lines.extend(
+        [
+            "## Recommended default",
+            "",
+            f"- Config: `{recommended['config']['name']}`",
+            f"- Combined score: {recommended['combinedScore']:.2f}",
+            f"- Web config: `{json.dumps(recommended['webConfig'], ensure_ascii=False)}`",
+            "",
+            "Why this one:",
+            "",
+            "- It is selected by joint SPY/QQQ ranking, not by one symbol only.",
+            "- The objective balances reference return, drawdown, zone coverage, transition count, and phase coverage.",
+            "- It requires both Bottom/Heat score level and a score gap, so conflicted days remain hold.",
+            "",
+            "Known limits:",
+            "",
+            "- Scores use free public data and daily bars; they are zone hints, not exact trade signals.",
+            "- Forward PE has no reliable free history here, so it remains a current-only gate.",
+            "- 2026 coverage is limited to the available latest data date.",
+            "",
+        ]
+    )
+    lines.extend(["### Recommended default trigger coverage", ""])
+    for symbol, metrics in recommended["symbols"].items():
+        ref = metrics["reference"]
+        lines.extend(
+            [
+                f"#### {symbol}",
+                "",
+                f"- Strategy reference return: {ref['strategyReturnPct']:.2f}%",
+                f"- Buy & Hold return: {ref['buyHoldReturnPct']:.2f}%",
+                f"- Excess return: {ref['excessReturnPct']:.2f}%",
+                f"- Max drawdown: {ref['maxDrawdownPct']:.2f}%",
+                f"- Bottom days: {metrics['bottomDays']}",
+                f"- Heat days: {metrics['heatDays']}",
+                f"- Transitions: {metrics['transitions']}",
+                "",
+            ]
+        )
+        for phase, phase_payload in metrics["phaseCoverage"].items():
+            if not phase_payload.get("available"):
+                lines.append(f"- {phase}: unavailable")
+                continue
+            lines.append(
+                f"- {phase}: bottom {phase_payload['bottomDays']} days, "
+                f"heat {phase_payload['heatDays']} days, "
+                f"max bottom {phase_payload['maxBottomScore']}, max heat {phase_payload['maxHeatScore']}"
+            )
+        lines.append("")
+    lines.extend(["## Recommended config by symbol", ""])
     for symbol, payload in results["symbols"].items():
         best = payload["best"]
         latest = best["metrics"]["latest"]
@@ -477,31 +700,62 @@ def write_report(results: dict[str, Any]) -> None:
                 f"- Strategy reference return: {ref['strategyReturnPct']:.2f}%",
                 f"- Buy & Hold return: {ref['buyHoldReturnPct']:.2f}%",
                 f"- Excess return: {ref['excessReturnPct']:.2f}%",
+                f"- Max drawdown: {ref['maxDrawdownPct']:.2f}%",
                 f"- Bottom days: {best['metrics']['bottomDays']}",
                 f"- Heat days: {best['metrics']['heatDays']}",
                 f"- Transitions: {best['metrics']['transitions']}",
                 "",
+                "Phase coverage:",
+                "",
             ]
         )
+        for phase, phase_payload in best["metrics"]["phaseCoverage"].items():
+            if not phase_payload.get("available"):
+                lines.append(f"- {phase}: unavailable")
+                continue
+            lines.append(
+                f"- {phase}: bottom {phase_payload['bottomDays']} days, "
+                f"heat {phase_payload['heatDays']} days, "
+                f"max bottom {phase_payload['maxBottomScore']}, max heat {phase_payload['maxHeatScore']}"
+            )
+        lines.append("")
     (OUT_DIR / "us_index_zone_report.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def run(symbols: list[str], refresh: bool) -> dict[str, Any]:
     output: dict[str, Any] = {"symbols": {}, "generatedAt": datetime.now().isoformat()}
+    configs = candidate_configs()
+    datasets: dict[str, pd.DataFrame] = {}
+    metas: dict[str, dict[str, Any]] = {}
     for symbol in symbols:
         df, meta = build_dataset(symbol, refresh)
+        datasets[symbol] = df
+        metas[symbol] = meta
         ranked = []
-        for cfg in candidate_configs():
+        for cfg in configs:
             metrics = evaluate(df, cfg)
-            ranked.append({"config": asdict(cfg), "metrics": metrics})
+            ranked.append({"config": asdict(cfg), "webConfig": cfg.web_config(), "metrics": metrics})
         ranked.sort(key=lambda item: item["metrics"]["score"], reverse=True)
         output["symbols"][symbol] = {
             "dataMeta": meta,
             "best": ranked[0],
-            "topConfigs": ranked[:5],
+            "topConfigs": ranked[:10],
         }
+    combined = combined_rank(datasets, configs)
+    output["searchSpace"] = {
+        "configCount": len(configs),
+        "symbols": symbols,
+        "marketPhases": MARKET_PHASES,
+        "objective": (
+            "combined SPY/QQQ score using reference return, buy-and-hold comparison, "
+            "max drawdown, zone count, phase coverage, transition count, and stability penalties"
+        ),
+    }
+    output["recommendedDefault"] = combined[0]
+    output["combinedTopConfigs"] = combined[:25]
+    output = json_safe(output)
     (OUT_DIR / "us_index_zone_results.json").write_text(
-        json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(output, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8"
     )
     write_report(output)
     return output
@@ -514,6 +768,12 @@ def main() -> None:
     args = parser.parse_args()
     symbols = ["SPY", "QQQ"] if args.symbol == "all" else [args.symbol]
     result = run(symbols, args.refresh)
+    recommended = result["recommendedDefault"]
+    print(
+        f"Recommended: {recommended['config']['name']} combined={recommended['combinedScore']:.2f} "
+        f"bottom={recommended['webConfig']['bottomThreshold']} "
+        f"heat={recommended['webConfig']['heatThreshold']} gap={recommended['webConfig']['conflictGap']}"
+    )
     for symbol, payload in result["symbols"].items():
         latest = payload["best"]["metrics"]["latest"]
         print(
