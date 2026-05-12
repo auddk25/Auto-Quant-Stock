@@ -95,24 +95,52 @@ def clamp(series: pd.Series | float, low: float = 0, high: float = 100):
     return np.minimum(high, np.maximum(low, series))
 
 
+def stochastic(close: pd.Series, high: pd.Series, low: pd.Series, period: int = 14) -> pd.Series:
+    """Compute Stochastic %K (fast)."""
+    lowest = low.rolling(period).min()
+    highest = high.rolling(period).max()
+    denom = (highest - lowest).replace(0, np.nan)
+    return ((close - lowest) / denom) * 100
+
+
 def build_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Compute all price-based indicators from OHLCV data."""
     out = df.copy()
     close = out["close"]
-    volume = out["volume"]
+    high = out["high"]
+    low = out["low"]
 
     # RSI
     out["rsi14"] = rsi(close, 14)
 
-    # Bollinger Bands (20, 2)
-    sma20 = close.rolling(20).mean()
-    std20 = close.rolling(20).std()
-    out["bb_lower"] = sma20 - 2 * std20
-    out["bb_upper"] = sma20 + 2 * std20
-    # distance below lower band as percentage
-    out["bb_dist"] = (out["bb_lower"] - close) / out["bb_lower"] * 100
+    # Stochastic %K(14)
+    out["stoch14"] = stochastic(close, high, low, 14)
 
-    # SMA 200
+    # Keltner Channel (EMA20 ± 2*ATR20) — replaces Bollinger Bands
+    out["ema20"] = close.ewm(span=20, adjust=False).mean()
+    tr = pd.concat([
+        high - low,
+        (high - close.shift(1)).abs(),
+        (low - close.shift(1)).abs(),
+    ], axis=1).max(axis=1)
+    out["atr20"] = tr.rolling(20).mean()
+    out["keltner_lower"] = out["ema20"] - 2 * out["atr20"]
+    out["keltner_upper"] = out["ema20"] + 2 * out["atr20"]
+    # distance below lower band as percentage
+    out["keltner_dist"] = (out["keltner_lower"] - close) / out["keltner_lower"] * 100
+
+    # ATR volatility ratio: ATR(14) / SMA(ATR(14), 70)
+    atr14 = tr.rolling(14).mean()
+    atr70 = atr14.rolling(70).mean()
+    out["atr_ratio"] = atr14 / atr70.replace(0, np.nan)
+
+    # EMA trend filter: 21 / 55 / 100 / 200
+    out["ema21"] = close.ewm(span=21, adjust=False).mean()
+    out["ema55"] = close.ewm(span=55, adjust=False).mean()
+    out["ema100"] = close.ewm(span=100, adjust=False).mean()
+    out["ema200"] = close.ewm(span=200, adjust=False).mean()
+
+    # SMA 200 (kept for reference)
     out["sma200"] = close.rolling(200).mean()
     out["dist_sma200"] = (close / out["sma200"] - 1) * 100
 
@@ -120,15 +148,7 @@ def build_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out["high252"] = close.rolling(252).max()
     out["drawdown252"] = (close / out["high252"] - 1) * 100
 
-    # Volume ratio vs 20-day average
-    vol_avg20 = volume.rolling(20).mean()
-    out["vol_ratio"] = volume / vol_avg20.replace(0, np.nan)
-
-    # EMA 20/50 for optional repair signal
-    out["ema20"] = close.ewm(span=20, adjust=False).mean()
-    out["ema50"] = close.ewm(span=50, adjust=False).mean()
-
-    return out.dropna(subset=["sma200", "rsi14", "bb_lower"])
+    return out.dropna(subset=["sma200", "rsi14", "keltner_lower"])
 
 
 def score_buy_signals(df: pd.DataFrame, cfg: DipConfig) -> pd.DataFrame:
@@ -137,24 +157,51 @@ def score_buy_signals(df: pd.DataFrame, cfg: DipConfig) -> pd.DataFrame:
 
     # Each component scored 0-100, higher = more panic/oversold
     rsi_score = clamp((50 - out["rsi14"]) * 2)
-    bb_score = clamp(out["bb_dist"] * 15)  # 1% below band → 15 points
+
+    # Keltner: score by distance from EMA20 in ATR units (more meaningful than band-edge %)
+    # 1.7 ATR below EMA = 50 pts, 3.3 ATR = 100
+    keltner_atr_dist = (out["ema20"] - out["close"]) / out["atr20"]  # positive = below EMA
+    keltner_score = clamp(keltner_atr_dist * 30)
+
     sma200_score = clamp(-out["dist_sma200"] * 3)  # 1% below SMA → 3 points
     drawdown_score = clamp(-out["drawdown252"] * 2.5)  # 1% drawdown → 2.5 points
-    volume_score = clamp((out["vol_ratio"] - 1) * 40)  # 1.5x vol → 20 points
+    atr_score = clamp((out["atr_ratio"] - 1) * 40)  # 1.5x ATR → 20 points
+
+    # RSI + Stochastic dual confirmation
+    rsi_oversold = (50 - out["rsi14"]).clip(lower=0) * 2  # 0-100 when RSI<50
+    stoch_oversold = (50 - out["stoch14"]).clip(lower=0) * 2  # 0-100 when Stoch<50
+    # Both must be oversold for full score; RSI<30 AND Stoch<20 = max bonus
+    dual_raw = (rsi_oversold + stoch_oversold) / 2
+    # Extra bonus when both are deeply oversold (RSI<30, Stoch<20)
+    deep_bonus = ((out["rsi14"] < 30) & (out["stoch14"] < 20)).astype(float) * 20
+    stoch_score = clamp(dual_raw + deep_bonus)
+
+    # EMA trend filter: bearish alignment (21<55<100<200) = oversold signals amplified
+    ema_trend = (
+        (out["ema21"] < out["ema55"]).astype(float)
+        + (out["ema55"] < out["ema100"]).astype(float)
+        + (out["ema100"] < out["ema200"]).astype(float)
+    ) / 3  # 0=bullish, 1=bearish
+    # Additive modifier: -4 pts (bull) to +4 pts (bear) — gentle nudge
+    trend_modifier = (ema_trend - 0.5) * 8
 
     out["rsi_score"] = rsi_score
-    out["bb_score"] = bb_score
+    out["keltner_score"] = keltner_score
     out["sma200_score"] = sma200_score
     out["drawdown_score"] = drawdown_score
-    out["volume_score"] = volume_score
+    out["atr_score"] = atr_score
+    out["stoch_score"] = stoch_score
+    out["ema_trend"] = ema_trend
 
-    out["composite_score"] = clamp(
+    raw_score = (
         cfg.w_rsi * rsi_score
-        + cfg.w_bb * bb_score
+        + cfg.w_keltner * keltner_score
         + cfg.w_sma200 * sma200_score
         + cfg.w_drawdown * drawdown_score
-        + cfg.w_volume * volume_score
+        + cfg.w_atr * atr_score
+        + cfg.w_stoch * stoch_score
     )
+    out["composite_score"] = clamp(raw_score + trend_modifier)
 
     out["buy_signal"] = out["composite_score"] >= cfg.buy_threshold
     return out
@@ -169,42 +216,47 @@ def score_buy_signals(df: pd.DataFrame, cfg: DipConfig) -> pd.DataFrame:
 class DipConfig:
     name: str
     w_rsi: float
-    w_bb: float
+    w_keltner: float
     w_sma200: float
     w_drawdown: float
-    w_volume: float
+    w_atr: float
+    w_stoch: float
     buy_threshold: float
 
 
 WEIGHT_SETS = [
-    # (rsi, bb, sma200, drawdown, volume)
-    (0.30, 0.25, 0.15, 0.20, 0.10),  # rsi-heavy
-    (0.25, 0.20, 0.15, 0.25, 0.15),  # drawdown-heavy
-    (0.20, 0.20, 0.20, 0.20, 0.20),  # equal weight
-    (0.25, 0.30, 0.10, 0.20, 0.15),  # bb-heavy
-    (0.30, 0.15, 0.20, 0.20, 0.15),  # rsi+sma200
-    (0.20, 0.15, 0.25, 0.25, 0.15),  # sma200+drawdown
-    (0.25, 0.20, 0.15, 0.15, 0.25),  # volume-heavy
+    # (rsi, keltner, sma200, drawdown, atr, stoch)
+    (0.25, 0.20, 0.15, 0.15, 0.10, 0.15),  # rsi-heavy
+    (0.20, 0.15, 0.15, 0.20, 0.15, 0.15),  # drawdown-heavy
+    (0.17, 0.17, 0.17, 0.17, 0.16, 0.16),  # equal weight
+    (0.20, 0.25, 0.10, 0.15, 0.15, 0.15),  # keltner-heavy
+    (0.25, 0.10, 0.20, 0.15, 0.15, 0.15),  # rsi+sma200
+    (0.15, 0.15, 0.25, 0.20, 0.10, 0.15),  # sma200+drawdown
+    (0.20, 0.15, 0.15, 0.10, 0.25, 0.15),  # atr-heavy
+    (0.20, 0.15, 0.15, 0.15, 0.10, 0.25),  # stoch-heavy
+    (0.30, 0.25, 0.05, 0.10, 0.10, 0.20),  # oscillator-heavy
+    (0.20, 0.20, 0.10, 0.10, 0.20, 0.20),  # balanced-osc
 ]
 
 
 def candidate_configs() -> list[DipConfig]:
     configs = []
     seen = set()
-    for w_rsi, w_bb, w_sma200, w_dd, w_vol in WEIGHT_SETS:
-        for threshold in [25, 30, 35, 40, 45, 50]:
-            key = (w_rsi, w_bb, w_sma200, w_dd, w_vol, threshold)
+    for w_rsi, w_keltner, w_sma200, w_dd, w_atr, w_stoch in WEIGHT_SETS:
+        for threshold in [20, 25, 30, 35, 40, 45, 50]:
+            key = (w_rsi, w_keltner, w_sma200, w_dd, w_atr, w_stoch, threshold)
             if key in seen:
                 continue
             seen.add(key)
             configs.append(
                 DipConfig(
-                    name=f"r{w_rsi:.2f}_b{w_bb:.2f}_s{w_sma200:.2f}_d{w_dd:.2f}_v{w_vol:.2f}_t{threshold}",
+                    name=f"r{w_rsi:.2f}_k{w_keltner:.2f}_s{w_sma200:.2f}_d{w_dd:.2f}_a{w_atr:.2f}_st{w_stoch:.2f}_t{threshold}",
                     w_rsi=w_rsi,
-                    w_bb=w_bb,
+                    w_keltner=w_keltner,
                     w_sma200=w_sma200,
                     w_drawdown=w_dd,
-                    w_volume=w_vol,
+                    w_atr=w_atr,
+                    w_stoch=w_stoch,
                     buy_threshold=threshold,
                 )
             )
@@ -430,28 +482,35 @@ def json_safe(value: Any) -> Any:
 def generate_pine_script(cfg: DipConfig) -> str:
     """Generate TradingView Pine Script v5 from optimized config."""
     return f'''//@version=5
-indicator("Buy-the-Dip DCA Signal", overlay=true, max_labels_count=500)
+indicator("Buy-the-Dip DCA Signal v2", overlay=true, max_labels_count=500)
 
 // ═══════════════════════════════════════════════════════
 // Inputs (optimized by grid search on QQQ)
 // ═══════════════════════════════════════════════════════
-w_rsi      = input.float({cfg.w_rsi:.2f}, "RSI Weight",      minval=0, maxval=1, step=0.05)
-w_bb       = input.float({cfg.w_bb:.2f}, "BB Weight",        minval=0, maxval=1, step=0.05)
-w_sma200   = input.float({cfg.w_sma200:.2f}, "SMA200 Weight",   minval=0, maxval=1, step=0.05)
-w_drawdown = input.float({cfg.w_drawdown:.2f}, "Drawdown Weight", minval=0, maxval=1, step=0.05)
-w_volume   = input.float({cfg.w_volume:.2f}, "Volume Weight",   minval=0, maxval=1, step=0.05)
-threshold  = input.float({cfg.buy_threshold:.0f}, "Buy Threshold",   minval=10, maxval=90, step=5)
+w_rsi      = input.float({cfg.w_rsi:.2f}, "RSI Weight",        minval=0, maxval=1, step=0.05)
+w_keltner  = input.float({cfg.w_keltner:.2f}, "Keltner Weight",    minval=0, maxval=1, step=0.05)
+w_sma200   = input.float({cfg.w_sma200:.2f}, "SMA200 Weight",     minval=0, maxval=1, step=0.05)
+w_drawdown = input.float({cfg.w_drawdown:.2f}, "Drawdown Weight",   minval=0, maxval=1, step=0.05)
+w_atr      = input.float({cfg.w_atr:.2f}, "ATR Vol Weight",     minval=0, maxval=1, step=0.05)
+w_stoch    = input.float({cfg.w_stoch:.2f}, "Stochastic Weight",  minval=0, maxval=1, step=0.05)
+threshold  = input.float({cfg.buy_threshold:.0f}, "Buy Threshold",     minval=10, maxval=90, step=5)
 
 // ═══════════════════════════════════════════════════════
 // Indicators
 // ═══════════════════════════════════════════════════════
-rsi_val = ta.rsi(close, 14)
+rsi_val    = ta.rsi(close, 14)
+stoch_val  = ta.stoch(close, high, low, 14)
 
-// Bollinger Bands (20, 2)
-bb_basis = ta.sma(close, 20)
-bb_dev   = ta.stdev(close, 20) * 2
-bb_lower = bb_basis - bb_dev
-bb_dist  = (bb_lower - close) / bb_lower * 100
+// Keltner Channel (EMA20 ± 2*ATR20)
+ema20_val  = ta.ema(close, 20)
+atr20_val  = ta.atr(20)
+kelt_lower = ema20_val - 2 * atr20_val
+kelt_atr_dist = (ema20_val - close) / atr20_val
+
+// ATR volatility ratio: ATR(14) / SMA(ATR(14), 70)
+atr14_val  = ta.atr(14)
+atr70_avg  = ta.sma(atr14_val, 70)
+atr_ratio  = atr14_val / atr70_avg
 
 // SMA 200 distance
 sma200      = ta.sma(close, 200)
@@ -461,25 +520,34 @@ dist_sma200 = (close / sma200 - 1) * 100
 high252     = ta.highest(close, 252)
 drawdown252 = (close / high252 - 1) * 100
 
-// Volume ratio
-vol_avg20 = ta.sma(volume, 20)
-vol_ratio = volume / vol_avg20
+// EMA trend filter: 21 / 55 / 100 / 200
+ema21  = ta.ema(close, 21)
+ema55  = ta.ema(close, 55)
+ema100 = ta.ema(close, 100)
+ema200 = ta.ema(close, 200)
 
 // ═══════════════════════════════════════════════════════
 // Scoring (0-100 each)
 // ═══════════════════════════════════════════════════════
 rsi_score      = math.max(0, math.min(100, (50 - rsi_val) * 2))
-bb_score       = math.max(0, math.min(100, bb_dist * 15))
+keltner_score  = math.max(0, math.min(100, kelt_atr_dist * 30))
 sma200_score   = math.max(0, math.min(100, -dist_sma200 * 3))
 drawdown_score = math.max(0, math.min(100, -drawdown252 * 2.5))
-volume_score   = math.max(0, math.min(100, (vol_ratio - 1) * 40))
+atr_score      = math.max(0, math.min(100, (atr_ratio - 1) * 40))
 
-composite = math.max(0, math.min(100,
-     w_rsi      * rsi_score
-   + w_bb       * bb_score
-   + w_sma200   * sma200_score
-   + w_drawdown * drawdown_score
-   + w_volume   * volume_score))
+// RSI + Stochastic dual confirmation
+rsi_raw   = math.max(0, (50 - rsi_val) * 2)
+stoch_raw = math.max(0, (50 - stoch_val) * 2)
+deep_bonus = (rsi_val < 30 and stoch_val < 20) ? 20.0 : 0.0
+stoch_score  = math.max(0, math.min(100, (rsi_raw + stoch_raw) / 2 + deep_bonus))
+
+// EMA trend filter: additive modifier (-6 bull to +6 bear)
+ema_trend = ((ema21 < ema55 ? 1.0 : 0.0) + (ema55 < ema100 ? 1.0 : 0.0) + (ema100 < ema200 ? 1.0 : 0.0)) / 3.0
+trend_mod = (ema_trend - 0.5) * 8
+
+raw_score = w_rsi * rsi_score + w_keltner * keltner_score + w_sma200 * sma200_score
+          + w_drawdown * drawdown_score + w_atr * atr_score + w_stoch * stoch_score
+composite = math.max(0, math.min(100, raw_score + trend_mod))
 
 // ═══════════════════════════════════════════════════════
 // Signal
@@ -494,17 +562,18 @@ plotshape(buy_signal, title="DCA Buy", style=shape.labelup,
      location=location.belowbar, color=color.green, text="BUY",
      textcolor=color.white, size=size.small)
 
-// Score plot (separate pane would be better, but this works for overlay)
+// Score plot
 plot(composite, title="Panic Score", color=color.new(color.orange, 0),
      linewidth=1, display=display.none)
 hline(threshold, "Threshold", color=color.red, linestyle=hline.style_dashed)
 
 // Debug: component scores (hidden by default)
 plot(rsi_score,      "RSI Score",      color=color.blue,   display=display.none)
-plot(bb_score,       "BB Score",       color=color.purple, display=display.none)
+plot(keltner_score,  "Keltner Score",  color=color.purple, display=display.none)
 plot(sma200_score,   "SMA200 Score",   color=color.gray,   display=display.none)
 plot(drawdown_score, "Drawdown Score", color=color.red,    display=display.none)
-plot(volume_score,   "Volume Score",   color=color.teal,   display=display.none)
+plot(atr_score,      "ATR Score",      color=color.teal,   display=display.none)
+plot(stoch_score,    "Stoch Score",    color=color.orange, display=display.none)
 '''
 
 
@@ -521,10 +590,12 @@ def write_report(results: dict[str, Any]) -> None:
         "",
         "Indicators:",
         "- RSI(14) oversold score",
-        "- Bollinger Band (20,2) lower breakout score",
+        "- Keltner Channel (EMA20 ± 2×ATR20) lower breakout score",
         "- Price below SMA(200) score",
         "- 252-day drawdown score",
-        "- Volume spike vs 20-day average score",
+        "- ATR volatility ratio: ATR(14)/SMA(ATR(14),70) panic spike",
+        "- RSI + Stochastic(14) dual confirmation score",
+        "- EMA 21/55/100/200 trend filter (bear bonus, bull penalty)",
         "",
         "Evaluation: forward returns (3/6/12m) after buy signals, win rate,",
         "DCA return vs buy-and-hold, crash phase coverage.",
@@ -579,9 +650,9 @@ def write_report(results: dict[str, Any]) -> None:
         "",
         f"- Config: `{cfg['name']}`",
         f"- Combined score: {recommended['combinedScore']:.2f}",
-        f"- Weights: RSI={cfg['w_rsi']:.2f}, BB={cfg['w_bb']:.2f}, "
+        f"- Weights: RSI={cfg['w_rsi']:.2f}, Keltner={cfg['w_keltner']:.2f}, "
         f"SMA200={cfg['w_sma200']:.2f}, DD={cfg['w_drawdown']:.2f}, "
-        f"Vol={cfg['w_volume']:.2f}",
+        f"ATR={cfg['w_atr']:.2f}, Stoch={cfg['w_stoch']:.2f}",
         f"- Buy threshold: {cfg['buy_threshold']:.0f}",
         "",
         "Per-symbol results:",
@@ -769,8 +840,9 @@ def main() -> None:
         f"Recommended: {cfg['name']} combined={recommended['combinedScore']:.2f} "
         f"threshold={cfg['buy_threshold']:.0f}"
     )
-    print(f"Weights: RSI={cfg['w_rsi']:.2f} BB={cfg['w_bb']:.2f} "
-          f"SMA200={cfg['w_sma200']:.2f} DD={cfg['w_drawdown']:.2f} Vol={cfg['w_volume']:.2f}")
+    print(f"Weights: RSI={cfg['w_rsi']:.2f} Keltner={cfg['w_keltner']:.2f} "
+          f"SMA200={cfg['w_sma200']:.2f} DD={cfg['w_drawdown']:.2f} "
+          f"ATR={cfg['w_atr']:.2f} Stoch={cfg['w_stoch']:.2f}")
 
     for symbol, metrics in recommended["symbols"].items():
         ref = metrics.get("reference", {})

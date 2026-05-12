@@ -1,0 +1,131 @@
+//@version=5
+indicator("Uptrend Dip Buy+Sell v1", overlay=true, max_labels_count=500)
+
+// ═══════════════════════════════════════════════════════
+// Inputs
+// ═══════════════════════════════════════════════════════
+buy_strategy  = input.string("breakout", "Buy Strategy", options=["pullback","breakout","both"])
+buy_threshold = input.float(40, "Buy Threshold", minval=10, maxval=90, step=5)
+sell_threshold = input.float(45, "Sell Threshold", minval=10, maxval=90, step=5)
+stop_loss_pct = input.float(15, "Stop Loss %", minval=1, maxval=20, step=1)
+
+// Pullback weights
+w_pb_trend  = input.float(0.00, "PB Trend",      minval=0, maxval=1, step=0.05)
+w_pb_level  = input.float(0.00, "PB Level",      minval=0, maxval=1, step=0.05)
+w_pb_rsi    = input.float(0.00, "PB RSI",        minval=0, maxval=1, step=0.05)
+w_pb_stoch  = input.float(0.00, "PB Stoch",      minval=0, maxval=1, step=0.05)
+w_pb_volume = input.float(0.00, "PB Volume",     minval=0, maxval=1, step=0.05)
+
+// Breakout weights
+w_bo_range    = input.float(0.20, "BO Range",      minval=0, maxval=1, step=0.05)
+w_bo_signal   = input.float(0.20, "BO Signal",     minval=0, maxval=1, step=0.05)
+w_bo_volume   = input.float(0.25, "BO Volume",     minval=0, maxval=1, step=0.05)
+w_bo_momentum = input.float(0.20, "BO Momentum",   minval=0, maxval=1, step=0.05)
+w_bo_trend    = input.float(0.15, "BO Trend",      minval=0, maxval=1, step=0.05)
+
+// Sell weights
+w_sell_breakdown = input.float(0.20, "Sell Breakdown",    minval=0, maxval=1, step=0.05)
+w_sell_cross     = input.float(0.15, "Sell Cross",        minval=0, maxval=1, step=0.05)
+w_sell_rsi_break = input.float(0.15, "Sell RSI Break",    minval=0, maxval=1, step=0.05)
+w_sell_overbought = input.float(0.20, "Sell Overbought",   minval=0, maxval=1, step=0.05)
+w_sell_kupper    = input.float(0.15, "Sell Keltner Upper", minval=0, maxval=1, step=0.05)
+w_sell_profit    = input.float(0.15, "Sell Profit",      minval=0, maxval=1, step=0.05)
+
+// ═══════════════════════════════════════════════════════
+// Indicators
+// ═══════════════════════════════════════════════════════
+atr14 = ta.atr(14)
+atr20 = ta.atr(20)
+
+ema20  = ta.ema(close, 20)
+ema21  = ta.ema(close, 21)
+ema55  = ta.ema(close, 55)
+ema100 = ta.ema(close, 100)
+sma200 = ta.sma(close, 200)
+
+keltner_upper = ema20 + 2 * atr20
+
+rsi_val   = ta.rsi(close, 14)
+stoch_val = ta.stoch(close, high, low, 14)
+vol_ratio = volume / ta.sma(volume, 20)
+
+trend_pairs = ((ema21 > ema55 ? 1.0 : 0.0) + (ema55 > ema100 ? 1.0 : 0.0) + (ema100 > sma200 ? 1.0 : 0.0)) / 3.0
+pullback_atr = (ema21 - close) / atr14
+rsi_sweet = math.max(0, math.min(100, 100 - math.abs(rsi_val - 40) * (100 / 15)))
+rsi_delta = rsi_val - ta.rsi(close, 14)[3]
+
+range_10 = ta.highest(high, 10) - ta.lowest(low, 10)
+range_pct = range_10 / close * 100
+atr_pct = atr14 / close * 100
+atr_compression = math.max(0, math.min(100, (3.0 - range_pct / atr_pct) * 33))
+
+high_20 = ta.highest(high, 20)
+breakout_dist = (close - high_20) / atr14
+keltner_upper_dist = (close - keltner_upper) / atr14
+
+ema_cross_down = ema21 < ema55 and ema21[1] >= ema55[1]
+
+// ═══════════════════════════════════════════════════════
+// Buy Scoring
+// ═══════════════════════════════════════════════════════
+// Pullback
+pb_trend  = trend_pairs * 100
+pb_level  = math.max(0, math.min(100, math.max(0, pullback_atr) * 50))
+pb_rsi    = rsi_sweet
+pb_stoch  = math.max(0, math.min(100, (40 - stoch_val) * 2.5))
+pb_volume = math.max(0, math.min(100, (1.0 - vol_ratio) * 100))
+buy_pullback = math.max(0, math.min(100,
+     w_pb_trend * pb_trend + w_pb_level * pb_level + w_pb_rsi * pb_rsi
+   + w_pb_stoch * pb_stoch + w_pb_volume * pb_volume))
+
+// Breakout
+bo_range    = atr_compression
+bo_signal   = math.max(0, math.min(100, math.max(0, breakout_dist) * 50))
+bo_volume   = math.max(0, math.min(100, (vol_ratio - 1.0) * 100))
+bo_momentum = math.max(0, math.min(100, math.max(0, math.min(60, rsi_val - 40)) * (100/60) + math.max(0, math.min(30, rsi_delta * 5))))
+bo_trend    = math.max(0, math.min(100, (close > sma200 ? 50.0 : 0.0) + trend_pairs * 50))
+buy_breakout = math.max(0, math.min(100,
+     w_bo_range * bo_range + w_bo_signal * bo_signal + w_bo_volume * bo_volume
+   + w_bo_momentum * bo_momentum + w_bo_trend * bo_trend))
+
+buy_score = buy_strategy == "pullback" ? buy_pullback : buy_strategy == "breakout" ? buy_breakout : math.max(buy_pullback, buy_breakout)
+
+// ═══════════════════════════════════════════════════════
+// Sell Scoring
+// ═══════════════════════════════════════════════════════
+sell_breakdown = math.max(
+     math.max(0, math.min(100, (ema55 - close) / atr14 * 40)),
+     math.max(0, math.min(100, (sma200 - close) / atr14 * 30)))
+sell_cross = ema_cross_down ? 100.0 : 0.0
+sell_rsi_break = (rsi_val < 40 and ta.rsi(close, 14)[5] > 50) ? math.max(0, math.min(100, (40 - rsi_val) * 2.5)) : 0.0
+sell_reversal = math.max(0, math.min(100,
+     w_sell_breakdown * sell_breakdown + w_sell_cross * sell_cross + w_sell_rsi_break * sell_rsi_break))
+
+// Overbought (simplified — no entry price in Pine)
+sell_overbought_rsi = math.max(0, math.min(100, (rsi_val - 45) * 2.0))
+sell_overbought_stoch = math.max(0, math.min(100, (stoch_val - 45) * 2.0))
+sell_ob = (sell_overbought_rsi + sell_overbought_stoch) / 2
+sell_kupper = math.max(0, math.min(100, math.max(0, keltner_upper_dist) * 50))
+sell_overbought = math.max(0, math.min(100, w_sell_overbought * sell_ob + w_sell_kupper * sell_kupper))
+
+sell_score = math.max(sell_reversal, sell_overbought)
+
+// ═══════════════════════════════════════════════════════
+// Signals & Plotting
+// ═══════════════════════════════════════════════════════
+buy_signal  = buy_score >= buy_threshold and not na(sma200)
+sell_signal = sell_score >= sell_threshold
+
+bgcolor(buy_signal ? color.new(color.green, 80) : na, title="Buy Zone")
+bgcolor(sell_signal ? color.new(color.red, 80) : na, title="Sell Zone")
+
+plotshape(buy_signal, title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.green, text="BUY", textcolor=color.white, size=size.small)
+plotshape(sell_signal, title="SELL", style=shape.labeldown, location=location.abovebar,
+     color=color.red, text="SELL", textcolor=color.white, size=size.small)
+
+// Debug plots (hidden)
+plot(buy_score, "Buy Score", color=color.green, display=display.none)
+plot(sell_score, "Sell Score", color=color.red, display=display.none)
+hline(buy_threshold, "Buy Threshold", color=color.green, linestyle=hline.style_dashed)
+hline(sell_threshold, "Sell Threshold", color=color.red, linestyle=hline.style_dashed)
