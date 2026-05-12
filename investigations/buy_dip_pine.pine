@@ -1,0 +1,76 @@
+//@version=5
+indicator("Buy-the-Dip DCA Signal", overlay=true, max_labels_count=500)
+
+// ═══════════════════════════════════════════════════════
+// Inputs (optimized by grid search on QQQ)
+// ═══════════════════════════════════════════════════════
+w_rsi      = input.float(0.20, "RSI Weight",      minval=0, maxval=1, step=0.05)
+w_bb       = input.float(0.20, "BB Weight",        minval=0, maxval=1, step=0.05)
+w_sma200   = input.float(0.20, "SMA200 Weight",   minval=0, maxval=1, step=0.05)
+w_drawdown = input.float(0.20, "Drawdown Weight", minval=0, maxval=1, step=0.05)
+w_volume   = input.float(0.20, "Volume Weight",   minval=0, maxval=1, step=0.05)
+threshold  = input.float(40, "Buy Threshold",   minval=10, maxval=90, step=5)
+
+// ═══════════════════════════════════════════════════════
+// Indicators
+// ═══════════════════════════════════════════════════════
+rsi_val = ta.rsi(close, 14)
+
+// Bollinger Bands (20, 2)
+bb_basis = ta.sma(close, 20)
+bb_dev   = ta.stdev(close, 20) * 2
+bb_lower = bb_basis - bb_dev
+bb_dist  = (bb_lower - close) / bb_lower * 100
+
+// SMA 200 distance
+sma200      = ta.sma(close, 200)
+dist_sma200 = (close / sma200 - 1) * 100
+
+// 252-day drawdown
+high252     = ta.highest(close, 252)
+drawdown252 = (close / high252 - 1) * 100
+
+// Volume ratio
+vol_avg20 = ta.sma(volume, 20)
+vol_ratio = volume / vol_avg20
+
+// ═══════════════════════════════════════════════════════
+// Scoring (0-100 each)
+// ═══════════════════════════════════════════════════════
+rsi_score      = math.max(0, math.min(100, (50 - rsi_val) * 2))
+bb_score       = math.max(0, math.min(100, bb_dist * 15))
+sma200_score   = math.max(0, math.min(100, -dist_sma200 * 3))
+drawdown_score = math.max(0, math.min(100, -drawdown252 * 2.5))
+volume_score   = math.max(0, math.min(100, (vol_ratio - 1) * 40))
+
+composite = math.max(0, math.min(100,
+     w_rsi      * rsi_score
+   + w_bb       * bb_score
+   + w_sma200   * sma200_score
+   + w_drawdown * drawdown_score
+   + w_volume   * volume_score))
+
+// ═══════════════════════════════════════════════════════
+// Signal
+// ═══════════════════════════════════════════════════════
+buy_signal = composite >= threshold and not na(sma200)
+
+// Background: panic intensity gradient
+bgcolor(buy_signal ? color.new(color.green, 70) : na, title="Buy Zone")
+
+// Buy label
+plotshape(buy_signal, title="DCA Buy", style=shape.labelup,
+     location=location.belowbar, color=color.green, text="BUY",
+     textcolor=color.white, size=size.small)
+
+// Score plot (separate pane would be better, but this works for overlay)
+plot(composite, title="Panic Score", color=color.new(color.orange, 0),
+     linewidth=1, display=display.none)
+hline(threshold, "Threshold", color=color.red, linestyle=hline.style_dashed)
+
+// Debug: component scores (hidden by default)
+plot(rsi_score,      "RSI Score",      color=color.blue,   display=display.none)
+plot(bb_score,       "BB Score",       color=color.purple, display=display.none)
+plot(sma200_score,   "SMA200 Score",   color=color.gray,   display=display.none)
+plot(drawdown_score, "Drawdown Score", color=color.red,    display=display.none)
+plot(volume_score,   "Volume Score",   color=color.teal,   display=display.none)
