@@ -27,8 +27,10 @@ import yfinance as yf
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
-OUT_DIR = ROOT / "investigations"
-CACHE_DIR = OUT_DIR / ".cache"
+CATALOG_DIR = ROOT / "strategy_catalog"
+BUY_DIP_DIR = CATALOG_DIR / "buy_dip_indicator"
+OUT_DIR = BUY_DIP_DIR
+CACHE_DIR = ROOT / "investigations" / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
 START_DATE = "2017-01-01"
@@ -578,6 +580,7 @@ plot(stoch_score,    "Stoch Score",    color=color.orange, display=display.none)
 
 
 def write_report(results: dict[str, Any]) -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     lines = [
         "# Buy-the-Dip Indicator Search Report",
         "",
@@ -715,6 +718,7 @@ def write_report(results: dict[str, Any]) -> None:
 
 
 def run(search_symbols: list[str], validate_symbols: list[str], refresh: bool) -> dict[str, Any]:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     output: dict[str, Any] = {
         "generatedAt": datetime.now().isoformat(),
         "searchSymbols": search_symbols,

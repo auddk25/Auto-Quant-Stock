@@ -1,0 +1,275 @@
+//@version=5
+indicator("Uptrend Dip Buy+Sell v1", overlay=true, max_labels_count=500)
+
+// -------------------------------------------------------
+// Inputs
+// -------------------------------------------------------
+buy_strategy  = input.string("bottom_reversal", "Buy Strategy", options=["pullback","breakout","tech_breakout","trend_breakout","bottom_reversal","rsi_divergence","index_shallow_pullback","both"])
+buy_threshold = input.float(45, "Buy Threshold", minval=10, maxval=90, step=5)
+sell_threshold = input.float(35, "Sell Threshold", minval=10, maxval=90, step=5)
+stop_loss_pct = input.float(7, "Stop Loss %", minval=1, maxval=20, step=1)
+benchmark_symbol = input.symbol("SPY", "Relative Strength Benchmark")
+
+// Pullback weights
+w_pb_trend  = input.float(0.30, "PB Trend",      minval=0, maxval=1, step=0.05)
+w_pb_level  = input.float(0.20, "PB Level",      minval=0, maxval=1, step=0.05)
+w_pb_rsi    = input.float(0.20, "PB RSI",        minval=0, maxval=1, step=0.05)
+w_pb_stoch  = input.float(0.20, "PB Stoch",      minval=0, maxval=1, step=0.05)
+w_pb_volume = input.float(0.10, "PB Volume",     minval=0, maxval=1, step=0.05)
+
+// Breakout weights
+w_bo_range    = input.float(0.00, "BO Range",      minval=0, maxval=1, step=0.05)
+w_bo_signal   = input.float(0.00, "BO Signal",     minval=0, maxval=1, step=0.05)
+w_bo_volume   = input.float(0.00, "BO Volume",     minval=0, maxval=1, step=0.05)
+w_bo_momentum = input.float(0.00, "BO Momentum",   minval=0, maxval=1, step=0.05)
+w_bo_trend    = input.float(0.00, "BO Trend / Tech RS", minval=0, maxval=1, step=0.05)
+
+// Sell weights
+w_sell_breakdown = input.float(0.20, "Sell Breakdown",    minval=0, maxval=1, step=0.05)
+w_sell_cross     = input.float(0.15, "Sell Cross",        minval=0, maxval=1, step=0.05)
+w_sell_rsi_break = input.float(0.15, "Sell RSI Break",    minval=0, maxval=1, step=0.05)
+w_sell_overbought = input.float(0.20, "Sell Overbought",   minval=0, maxval=1, step=0.05)
+w_sell_kupper    = input.float(0.15, "Sell Keltner Upper", minval=0, maxval=1, step=0.05)
+w_sell_profit    = input.float(0.15, "Sell Profit",      minval=0, maxval=1, step=0.05)
+
+// Helpers
+rolling_count(condition, length) =>
+    count = 0.0
+    for i = 0 to length - 1
+        count += condition[i] ? 1.0 : 0.0
+    count
+
+// -------------------------------------------------------
+// Indicators
+// -------------------------------------------------------
+atr14 = ta.atr(14)
+atr20 = ta.atr(20)
+
+ema20  = ta.ema(close, 20)
+ema21  = ta.ema(close, 21)
+ema55  = ta.ema(close, 55)
+ema100 = ta.ema(close, 100)
+sma200 = ta.sma(close, 200)
+ema55_slope20 = (ema55 / ema55[20] - 1) * 100
+[_plus_di, _minus_di, adx_val] = ta.dmi(14, 14)
+
+keltner_upper = ema20 + 2 * atr20
+
+rsi_val   = ta.rsi(close, 14)
+stoch_val = ta.stoch(close, high, low, 14)
+vol_ratio = volume / ta.sma(volume, 20)
+
+drawdown_252 = (close / ta.highest(close, 252) - 1) * 100
+return_5d = (close / close[5] - 1) * 100
+return_20d = (close / close[20] - 1) * 100
+
+trend_pairs = ((ema21 > ema55 ? 1.0 : 0.0) + (ema55 > ema100 ? 1.0 : 0.0) + (ema100 > sma200 ? 1.0 : 0.0)) / 3.0
+pullback_atr = (ema21 - close) / atr14
+rsi_sweet = math.max(0, math.min(100, 100 - math.abs(rsi_val - 40) * (100 / 15)))
+rsi_delta = rsi_val - ta.rsi(close, 14)[3]
+
+range_10 = ta.highest(high, 10) - ta.lowest(low, 10)
+range_pct = range_10 / close * 100
+atr_pct = atr14 / close * 100
+atr_compression = math.max(0, math.min(100, (3.0 - range_pct / atr_pct) * 33))
+
+high_20 = ta.highest(high, 20)
+breakout_dist = (close - high_20) / atr14
+prior_high_20 = ta.highest(high[1], 20)
+tech_breakout_dist = (close - prior_high_20) / atr14
+keltner_upper_dist = (close - keltner_upper) / atr14
+
+benchmark_close = request.security(benchmark_symbol, timeframe.period, close)
+rs_ratio = close / benchmark_close
+rs_sma50 = ta.sma(rs_ratio, 50)
+rs_delta20 = rs_ratio / rs_ratio[20] - 1
+rs_level = math.max(0, math.min(100, (rs_ratio / rs_sma50 - 1) * 500 + 50))
+rs_slope = math.max(0, math.min(100, rs_delta20 * 500 + 50))
+relative_strength_score = (rs_level + rs_slope) / 2
+
+prior_low_120 = ta.lowest(low[10], 120)
+retest_dist_pct = math.abs(close / prior_low_120 - 1) * 100
+low_120 = ta.lowest(low, 120)
+near_low = low <= low_120 * 1.05
+near_low_count = rolling_count(near_low, 120)
+retest_score = math.max(0, math.min(100, (8 - retest_dist_pct) * 12.5))
+multi_bottom_bonus = math.max(0, math.min(40, (near_low_count - 2) * 15))
+bottom_retest_score = math.max(0, math.min(100, retest_score + multi_bottom_bonus))
+prior_rsi_min = ta.lowest(rsi_val[10], 60)
+lower_low_zone = close <= prior_low_120 * 1.05
+rsi_divergence_score = (lower_low_zone ? 1.0 : 0.0) * math.max(0, math.min(100, (rsi_val - prior_rsi_min - 4) * 8))
+crash_score = math.max(0, math.min(100, (-return_20d - 10) * 5 + (-return_5d - 4) * 5))
+capitulation_score = math.max(0, math.min(100, (vol_ratio - 1.2) * 45 + (35 - rsi_val) * 3))
+
+dd_abs = -drawdown_252
+idx_drawdown_entry = math.max(0, math.min(100, (dd_abs - 2.5) * 35))
+idx_too_deep_guard = math.max(0, math.min(100, (22 - dd_abs) * 8))
+idx_drawdown = math.min(idx_drawdown_entry, idx_too_deep_guard)
+ema21_dist_pct = (close / ema21 - 1) * 100
+ema55_dist_pct = (close / ema55 - 1) * 100
+sma200_dist_pct = (close / sma200 - 1) * 100
+idx_ema21_support = math.max(0, math.min(100, (4 - math.abs(ema21_dist_pct)) * 25))
+idx_ema55_support = math.max(0, math.min(100, (6 - math.abs(ema55_dist_pct)) * (100 / 6)))
+idx_sma200_support = math.max(0, math.min(100, (5 - math.abs(sma200_dist_pct)) * 20))
+idx_support = math.max(idx_ema21_support, math.max(idx_ema55_support, idx_sma200_support))
+idx_rsi_reset = math.max(0, math.min(100, 100 - math.abs(rsi_val - 43) * 5.5))
+idx_decline = math.max(0, math.min(100, (-return_20d - 2) * 10 + (-return_5d - 0.5) * 12))
+idx_trend_buffer = math.max(0, math.min(100, (close / sma200 - 0.97) * 900))
+idx_slope_health = math.max(0, math.min(100, ema55_slope20 * 10 + 40))
+idx_trend_health = math.max(0, math.min(100, trend_pairs * 45 + idx_trend_buffer * 0.30 + idx_slope_health * 0.25))
+
+ema_cross_down = ema21 < ema55 and ema21[1] >= ema55[1]
+
+// -------------------------------------------------------
+// Buy Scoring
+// -------------------------------------------------------
+// Pullback
+pb_trend  = trend_pairs * 100
+pb_level  = math.max(0, math.min(100, math.max(0, pullback_atr) * 50))
+pb_rsi    = rsi_sweet
+pb_stoch  = math.max(0, math.min(100, (40 - stoch_val) * 2.5))
+pb_volume = math.max(0, math.min(100, (1.0 - vol_ratio) * 100))
+buy_pullback = math.max(0, math.min(100,
+     w_pb_trend * pb_trend + w_pb_level * pb_level + w_pb_rsi * pb_rsi
+   + w_pb_stoch * pb_stoch + w_pb_volume * pb_volume))
+
+// Bottom Reversal
+btm_drawdown = math.max(0, math.min(100, (-drawdown_252 - 15) * 4))
+buy_bottom_reversal = math.max(0, math.min(100,
+     w_pb_trend * btm_drawdown + w_pb_level * bottom_retest_score + w_pb_rsi * rsi_divergence_score
+   + w_pb_stoch * crash_score + w_pb_volume * capitulation_score))
+
+// RSI Divergence Baseline
+rsi_div_drawdown = math.max(0, math.min(100, (-drawdown_252 - 10) * 5))
+rsi_washout = math.max(0, math.min(100, (40 - rsi_val) * 4))
+buy_rsi_divergence = math.max(0, math.min(100,
+     w_pb_trend * rsi_divergence_score + w_pb_level * bottom_retest_score + w_pb_rsi * rsi_div_drawdown
+   + w_pb_stoch * rsi_washout + w_pb_volume * capitulation_score))
+
+// Index Shallow Pullback
+buy_index_shallow_pullback = math.max(0, math.min(100,
+     w_pb_trend * idx_drawdown + w_pb_level * idx_support + w_pb_rsi * idx_rsi_reset
+   + w_pb_stoch * idx_decline + w_pb_volume * idx_trend_health))
+
+// Breakout
+bo_range    = atr_compression
+bo_signal   = math.max(0, math.min(100, math.max(0, breakout_dist) * 50))
+bo_volume   = math.max(0, math.min(100, (vol_ratio - 1.0) * 100))
+bo_momentum = math.max(0, math.min(100, math.max(0, math.min(60, rsi_val - 40)) * (100/60) + math.max(0, math.min(30, rsi_delta * 5))))
+bo_trend    = math.max(0, math.min(100, (close > sma200 ? 50.0 : 0.0) + trend_pairs * 50))
+buy_breakout = math.max(0, math.min(100,
+     w_bo_range * bo_range + w_bo_signal * bo_signal + w_bo_volume * bo_volume
+   + w_bo_momentum * bo_momentum + w_bo_trend * bo_trend))
+
+// Tech Breakout
+tb_compression = atr_compression
+tb_breakout = math.max(0, math.min(100, math.max(0, tech_breakout_dist) * 60))
+tb_volume = math.max(0, math.min(100, (vol_ratio - 1.05) * 110))
+tb_momentum = math.max(0, math.min(100, math.max(0, math.min(100, (rsi_val - 45) * (100/25))) + math.max(0, math.min(35, rsi_delta * 6))))
+buy_tech_breakout = math.max(0, math.min(100,
+     w_bo_range * tb_compression + w_bo_signal * tb_breakout + w_bo_volume * tb_volume
+   + w_bo_momentum * tb_momentum + w_bo_trend * relative_strength_score))
+buy_tech_breakout := math.max(buy_breakout, buy_tech_breakout)
+
+// Trend-filtered Breakout
+tr_adx = math.max(0, math.min(100, (adx_val - 18) * 5))
+tr_slope = math.max(0, math.min(100, ema55_slope20 * 20))
+tr_quality = w_bo_trend * tr_adx + (1 - w_bo_trend) * tr_slope
+buy_trend_breakout = math.max(0, math.min(100, buy_breakout * (0.55 + tr_quality * 0.007)))
+
+buy_score = buy_strategy == "pullback" ? buy_pullback : buy_strategy == "breakout" ? buy_breakout : buy_strategy == "tech_breakout" ? buy_tech_breakout : buy_strategy == "trend_breakout" ? buy_trend_breakout : buy_strategy == "bottom_reversal" ? buy_bottom_reversal : buy_strategy == "rsi_divergence" ? buy_rsi_divergence : buy_strategy == "index_shallow_pullback" ? buy_index_shallow_pullback : math.max(buy_pullback, buy_breakout)
+
+// -------------------------------------------------------
+// Sell Scoring
+// -------------------------------------------------------
+sell_breakdown = math.max(
+     math.max(0, math.min(100, (ema55 - close) / atr14 * 40)),
+     math.max(0, math.min(100, (sma200 - close) / atr14 * 30)))
+sell_cross = ema_cross_down ? 100.0 : 0.0
+sell_rsi_break = (rsi_val < 40 and ta.rsi(close, 14)[5] > 50) ? math.max(0, math.min(100, (40 - rsi_val) * 2.5)) : 0.0
+sell_reversal = math.max(0, math.min(100,
+     w_sell_breakdown * sell_breakdown + w_sell_cross * sell_cross + w_sell_rsi_break * sell_rsi_break))
+
+// Overbought (simplified - no entry price in Pine)
+sell_overbought_rsi = math.max(0, math.min(100, (rsi_val - 45) * 2.0))
+sell_overbought_stoch = math.max(0, math.min(100, (stoch_val - 45) * 2.0))
+sell_ob = (sell_overbought_rsi + sell_overbought_stoch) / 2
+sell_kupper = math.max(0, math.min(100, math.max(0, keltner_upper_dist) * 50))
+sell_overbought = math.max(0, math.min(100, w_sell_overbought * sell_ob + w_sell_kupper * sell_kupper))
+
+sell_score = math.max(sell_reversal, sell_overbought)
+
+// -------------------------------------------------------
+// Signals & Plotting
+// -------------------------------------------------------
+raw_buy_signal  = buy_score >= buy_threshold and not na(sma200)
+raw_sell_signal = sell_score >= sell_threshold
+bearish_candle = close < open
+
+var bool in_position = false
+var float entry_price = na
+var float peak_price = na
+
+buy_signal = raw_buy_signal and bearish_candle and not in_position
+if buy_signal
+    in_position := true
+    entry_price := close
+    peak_price := close
+else if in_position
+    peak_price := math.max(peak_price, close)
+
+current_return = in_position and not na(entry_price) ? (close / entry_price - 1) * 100 : na
+peak_return = in_position and not na(entry_price) ? (peak_price / entry_price - 1) * 100 : na
+peak_drawdown = in_position and not na(peak_price) ? (close / peak_price - 1) * 100 : na
+stop_loss_signal = in_position and current_return <= -stop_loss_pct
+profit_drawdown_signal = in_position and peak_return >= 12 and peak_drawdown <= -7
+atr_trailing_signal = in_position and peak_return >= 8 and close <= peak_price - 3 * atr14
+
+sell_signal = in_position and not buy_signal and (raw_sell_signal or stop_loss_signal or profit_drawdown_signal or atr_trailing_signal)
+if sell_signal
+    in_position := false
+    entry_price := na
+    peak_price := na
+
+bgcolor(buy_signal ? color.new(color.green, 80) : na, title="Buy Zone")
+bgcolor(sell_signal ? color.new(color.red, 80) : na, title="Sell Zone")
+
+idx_strong_signal = buy_signal and buy_strategy == "index_shallow_pullback" and buy_score >= 55 and idx_support >= 70 and idx_rsi_reset >= 60
+idx_medium_signal = buy_signal and buy_strategy == "index_shallow_pullback" and not idx_strong_signal and buy_score >= 45
+idx_watch_signal = buy_signal and buy_strategy == "index_shallow_pullback" and not idx_strong_signal and not idx_medium_signal
+btm_strong_signal = buy_signal and buy_strategy == "bottom_reversal" and buy_score >= 55 and drawdown_252 <= -20 and (bottom_retest_score >= 75 or rsi_divergence_score >= 75)
+btm_medium_signal = buy_signal and buy_strategy == "bottom_reversal" and not btm_strong_signal and buy_score >= 45
+btm_watch_signal = buy_signal and buy_strategy == "bottom_reversal" and not btm_strong_signal and not btm_medium_signal
+rsi_div_strong_signal = buy_signal and buy_strategy == "rsi_divergence" and buy_score >= 55 and rsi_divergence_score >= 75 and drawdown_252 <= -15
+rsi_div_medium_signal = buy_signal and buy_strategy == "rsi_divergence" and not rsi_div_strong_signal and buy_score >= 45
+rsi_div_watch_signal = buy_signal and buy_strategy == "rsi_divergence" and not rsi_div_strong_signal and not rsi_div_medium_signal
+other_buy_signal = buy_signal and buy_strategy != "index_shallow_pullback" and buy_strategy != "bottom_reversal" and buy_strategy != "rsi_divergence"
+
+plotshape(idx_strong_signal, title="INDEX SHALLOW STRONG", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.green, 0), text="IDX STRONG", textcolor=color.white, size=size.small)
+plotshape(idx_medium_signal, title="INDEX SHALLOW MEDIUM", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.teal, 0), text="IDX MED", textcolor=color.white, size=size.small)
+plotshape(idx_watch_signal, title="INDEX SHALLOW WATCH", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.gray, 0), text="IDX WATCH", textcolor=color.white, size=size.small)
+plotshape(btm_strong_signal, title="DEEP BOTTOM STRONG", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.purple, 0), text="BTM STRONG", textcolor=color.white, size=size.small)
+plotshape(btm_medium_signal, title="DEEP BOTTOM MEDIUM", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.orange, 0), text="BTM MED", textcolor=color.white, size=size.small)
+plotshape(btm_watch_signal, title="DEEP BOTTOM WATCH", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.gray, 0), text="BTM WATCH", textcolor=color.white, size=size.small)
+plotshape(rsi_div_strong_signal, title="RSI DIVERGENCE STRONG", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.blue, 0), text="RSI DIV STRONG", textcolor=color.white, size=size.small)
+plotshape(rsi_div_medium_signal, title="RSI DIVERGENCE MEDIUM", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.navy, 0), text="RSI DIV MED", textcolor=color.white, size=size.small)
+plotshape(rsi_div_watch_signal, title="RSI DIVERGENCE WATCH", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.gray, 0), text="RSI DIV WATCH", textcolor=color.white, size=size.small)
+plotshape(other_buy_signal, title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.green, text="BUY", textcolor=color.white, size=size.small)
+plotshape(sell_signal, title="SELL", style=shape.labeldown, location=location.abovebar,
+     color=color.red, text="SELL", textcolor=color.white, size=size.small)
+
+// Debug plots (hidden)
+plot(buy_score, "Buy Score", color=color.green, display=display.none)
+plot(sell_score, "Sell Score", color=color.red, display=display.none)
+hline(buy_threshold, "Buy Threshold", color=color.green, linestyle=hline.style_dashed)
+hline(sell_threshold, "Sell Threshold", color=color.red, linestyle=hline.style_dashed)

@@ -31,6 +31,9 @@ __pycache__/
 # Research helper caches
 investigations/.cache/
 
+# Large research JSON remains local; compressed archive is tracked instead.
+strategy_catalog/bottom_signal_2022_2026_research/bottom_signal_results_2022_2026_miss_expanded.json
+
 # Claude Code
 .review-result.md
 .audit-result.md

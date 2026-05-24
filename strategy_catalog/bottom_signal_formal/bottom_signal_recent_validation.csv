@@ -1,0 +1,8 @@
+symbol,date,channel,tier,checkStatus,bottomScore,rsSignalScore,riskFlags,fwd126,adverse126
+AAPL,2025-04-04,MB,Strong,Pass,82,46,no_repair,0.365954,-0.084722
+AVGO,2025-04-04,MB,Strong,Pass,82,46,no_repair,1.302658,0.000000
+CAT,2025-04-04,MB,Strong,Pass,82,46,no_repair,0.734201,-0.049084
+META,2025-04-04,MB,Strong,Pass,82,46,no_repair,0.419955,-0.039764
+NVDA,2025-04-04,MB,Strong,Pass,82,46,no_repair,0.967589,0.000000
+QQQ,2025-04-04,MB,Strong,Pass,82,46,no_repair,0.441072,-0.015639
+TSM,2025-04-04,MB,Strong,Pass,82,46,no_repair,1.074000,-0.036989

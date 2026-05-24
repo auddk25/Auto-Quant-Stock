@@ -1,0 +1,5 @@
+window,source,symbol,date,channel,tier,bottomScore,formalThreshold,scoreGap,riskFlags,fwd126,reasonBucket
+QQQ 2022 Q4,observation,QQQ,2022-10-03,OBS-D,Observation,68,82,14,,0.17109299833565128,below_formal_threshold
+QQQ 2022 Q4,observation,QQQ,2022-10-11,OBS-D,Observation,69,82,13,no_repair,0.21952236052036422,below_formal_threshold
+QQQ 2022 Q4,observation,QQQ,2022-12-28,OBS-D,Observation,68,82,14,no_repair,0.4244498693291656,below_formal_threshold
+QQQ 2026 March,observation,QQQ,2026-03-27,OBS-S,Observation,71,82,11,no_repair,,below_formal_threshold

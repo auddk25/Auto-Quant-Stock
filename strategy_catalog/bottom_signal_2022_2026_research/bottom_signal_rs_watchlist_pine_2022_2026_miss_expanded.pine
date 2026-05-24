@@ -1,0 +1,111 @@
+//@version=6
+indicator("AutoQuant RS Watchlist - Observation only", overlay=true, max_labels_count=500)
+
+ddWindow = input.int(21, "Drawdown Window", minval=2)
+ddThreshold = input.float(-12, "Drawdown Threshold %", step=0.5)
+rsiPeriod = input.int(14, "RSI Period", minval=2)
+stochPeriod = input.int(9, "Stochastic Period", minval=2)
+stochSmooth = input.int(3, "Stochastic Smooth", minval=1)
+macdFast = input.int(8, "MACD Fast", minval=1)
+macdSlow = input.int(21, "MACD Slow", minval=2)
+macdSignal = input.int(5, "MACD Signal", minval=1)
+smaPeriod = input.int(150, "SMA Period", minval=2)
+volumeWindow = input.int(10, "Volume Window", minval=2)
+marketSymbol1 = input.symbol("QQQ", "Market Symbol 1")
+marketSymbol2 = input.symbol("SPY", "Market Symbol 2")
+rsWindow = input.int(63, "RS Window", minval=2)
+rsDrawdownAdvantageThreshold = input.float(3, "RS Drawdown Advantage %", step=0.5)
+rsRepairAdvantageThreshold = input.float(3, "RS Repair Advantage %", step=0.5)
+watchThreshold = input.int(64, "Watch Score", minval=1, maxval=100)
+mediumThreshold = input.int(76, "Medium Score", minval=1, maxval=100)
+qualityThreshold = input.int(70, "RS Quality Threshold", minval=1, maxval=100)
+showScoreLines = input.bool(false, "Show Score Lines")
+showSignalColors = input.bool(true, "Show Signal Candle Colors")
+showSignalBackground = input.bool(true, "Show Signal Background")
+showSignalTable = input.bool(true, "Show Signal Table")
+showTextMarkers = input.bool(true, "Show Text Markers")
+
+clip01(x) =>
+    math.min(1.0, math.max(0.0, nz(x, 0.0)))
+
+rollingHigh = ta.highest(close, ddWindow)
+drawdown = (close / rollingHigh - 1.0) * 100.0
+rsiValue = ta.rsi(close, rsiPeriod)
+stochRaw = ta.stoch(close, high, low, stochPeriod)
+stochValue = ta.sma(stochRaw, stochSmooth)
+[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)
+smaValue = ta.sma(close, smaPeriod)
+distSma = (close / smaValue - 1.0) * 100.0
+volumeSma = ta.sma(volume, volumeWindow)
+volumeRatio = volumeSma == 0 ? 1.0 : volume / volumeSma
+
+marketClose1 = request.security(marketSymbol1, timeframe.period, close)
+marketClose2 = request.security(marketSymbol2, timeframe.period, close)
+rsMarketDrawdown1 = (marketClose1 / ta.highest(marketClose1, rsWindow) - 1.0) * 100.0
+rsMarketDrawdown2 = (marketClose2 / ta.highest(marketClose2, rsWindow) - 1.0) * 100.0
+rsMarketDrawdown = math.min(rsMarketDrawdown1, rsMarketDrawdown2)
+stockRepair = (close / ta.lowest(close, rsWindow) - 1.0) * 100.0
+marketRepair1 = (marketClose1 / ta.lowest(marketClose1, rsWindow) - 1.0) * 100.0
+marketRepair2 = (marketClose2 / ta.lowest(marketClose2, rsWindow) - 1.0) * 100.0
+marketRepair = math.max(marketRepair1, marketRepair2)
+
+drawdownScore = clip01((-drawdown) / math.abs(ddThreshold))
+rsiScore = clip01((48.0 - rsiValue) / 24.0)
+stochScore = clip01((45.0 - stochValue) / 35.0)
+momentumScore = rsiScore * 0.65 + stochScore * 0.35
+macdRepair = clip01((macdHist - ta.lowest(macdHist, 3)) / 1.5)
+closeRepair = clip01((close / ta.lowest(close, 5) - 1.0) / 0.06)
+repairScore = macdRepair * 0.55 + closeRepair * 0.45
+retestGap = math.abs(low / ta.lowest(low, 21) - 1.0)
+retestScore = clip01((0.08 - retestGap) / 0.08)
+baseNow = close >= ta.lowest(close, 21) * 0.97 and close <= ta.lowest(close, 21) * 1.12 ? 1.0 : 0.0
+baseScore = clip01(ta.sma(baseNow, 10) * 10.0 / 7.0)
+structureScore = retestScore * 0.55 + baseScore * 0.45
+volumeScore = clip01((volumeRatio - 0.9) / 0.8)
+maDiscountScore = clip01((-distSma) / 18.0)
+
+rawBottom = drawdownScore * 0.30 + momentumScore * 0.22 + repairScore * 0.18 + structureScore * 0.15 + volumeScore * 0.08 + maDiscountScore * 0.07
+bottomScore = math.round(math.min(100.0, math.max(1.0, 1.0 + rawBottom * 99.0)))
+
+rsDrawdownAdvantage = drawdown - rsMarketDrawdown
+rsRepairAdvantage = stockRepair - marketRepair
+rsDrawdownScore = clip01(rsDrawdownAdvantage / rsDrawdownAdvantageThreshold)
+rsRepairScore = clip01(rsRepairAdvantage / rsRepairAdvantageThreshold)
+rsTrendScore = clip01((distSma + 5.0) / 15.0)
+rawRs = rsDrawdownScore * 0.45 + rsRepairScore * 0.45 + rsTrendScore * 0.10
+relativeStrengthScore = math.round(math.min(100.0, math.max(1.0, 1.0 + rawRs * 99.0)))
+rsSignalScore = math.round(math.min(100.0, math.max(1.0, bottomScore * 0.55 + relativeStrengthScore * 0.45)))
+
+trendDamage = distSma < -32.0
+lowVolume = volumeRatio < 0.75
+noRepair = repairScore < 0.25 and drawdown <= ddThreshold
+overextendedRebound = (close / ta.lowest(close, 10) - 1.0) >= 0.12 and distSma > 0 and drawdown > ddThreshold * 1.5
+riskPenalty = (trendDamage ? 25.0 : 0.0) + (noRepair ? 18.0 : 0.0) + (lowVolume ? 10.0 : 0.0) + (overextendedRebound ? 16.0 : 0.0)
+tierBonus = rsSignalScore >= mediumThreshold ? 3.0 : 0.0
+rsQualityScore = math.round(math.min(100.0, math.max(1.0, relativeStrengthScore * 0.45 + rsSignalScore * 0.30 + bottomScore * 0.15 + tierBonus - riskPenalty)))
+
+rsWatch = rsSignalScore >= watchThreshold
+rsQualified = rsWatch and rsQualityScore >= qualityThreshold
+rsRisk = rsWatch and rsQualityScore < qualityThreshold
+rsDisplaySignal = rsQualified ? "RS-Q" : rsRisk ? "RS-R" : "None"
+rsDisplayColor = rsQualified ? color.aqua : rsRisk ? color.orange : na
+barcolor(showSignalColors ? rsDisplayColor : na)
+bgcolor(showSignalBackground and rsDisplaySignal != "None" ? color.new(rsDisplayColor, 88) : na)
+
+var table rsTable = table.new(position.bottom_right, 2, 5, border_width=1)
+if barstate.islast and showSignalTable
+    table.cell(rsTable, 0, 0, "Signal", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(rsTable, 1, 0, rsDisplaySignal, text_color=color.black, bgcolor=rsDisplaySignal == "None" ? color.new(color.gray, 35) : color.new(rsDisplayColor, 0))
+    table.cell(rsTable, 0, 1, "RS Signal", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(rsTable, 1, 1, str.tostring(rsSignalScore), text_color=color.black, bgcolor=color.new(color.aqua, 55))
+    table.cell(rsTable, 0, 2, "Quality", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(rsTable, 1, 2, str.tostring(rsQualityScore), text_color=color.white, bgcolor=color.new(color.blue, 55))
+    table.cell(rsTable, 0, 3, "Bottom", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(rsTable, 1, 3, str.tostring(bottomScore), text_color=color.white, bgcolor=color.new(color.green, 65))
+    table.cell(rsTable, 0, 4, "RS-R", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(rsTable, 1, 4, "Risk", text_color=color.white, bgcolor=color.new(color.orange, 25))
+
+plot(showScoreLines ? rsSignalScore : na, "RS Signal Score", color=color.new(color.aqua, 0), linewidth=1, display=display.data_window)
+plot(showScoreLines ? rsQualityScore : na, "RS Quality Score", color=color.new(color.blue, 0), linewidth=1, display=display.data_window)
+plotshape(showTextMarkers and rsQualified, "RS-Q", style=shape.labelup, location=location.belowbar, color=color.new(color.aqua, 0), text="RS-Q", textcolor=color.black, size=size.small)
+plotshape(showTextMarkers and rsRisk, "RS-R", style=shape.labelup, location=location.belowbar, color=color.new(color.orange, 0), text="RS-R", textcolor=color.black, size=size.tiny)

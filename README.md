@@ -12,6 +12,10 @@ re-adapted for US stocks using Backtesting.py + yfinance.
   for each on every ticker, prints structured summary. Agent does not touch.
 - **`strategies/`** — **the directory the agent owns.** Each `.py` is one strategy.
 
+Legacy crypto/Freqtrade configuration is archived under `versions/`. The current
+US-stock workflow uses `config.py`; the old root `config.json` is not part of the
+active Backtesting.py + yfinance setup.
+
 ## Requirements
 
 - Python 3.11+
@@ -92,7 +96,7 @@ Auto-Quant-Stock/
 ├── strategies/
 │   └── _template.py.example
 ├── data/                  # gitignored — downloaded OHLCV
-├── results.tsv            # gitignored — agent event log
+├── results.tsv            # generated when running old agent loop; gitignored
 └── versions/              # frozen snapshots of past runs
 ```
 

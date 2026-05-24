@@ -1,0 +1,7 @@
+factor,impactLabel,configName,compositeScore,compositeDelta,signalCount,signalCountDelta,avgFwd126,avgFwd126Delta,avgAdverse126,avgAdverse126Delta
+drawdown,Critical,btm_dw21_dt8_r10_st9x3_m12x26x9_sma200_atr20_vol10_gap21_entry78_mbo0_rs63_wmomentum_reset_no_drawdown,0.000000,-30.278036,8,-116,0.210768,-0.105330,-0.203940,-0.087306
+momentum,Overactive,btm_dw21_dt8_r10_st9x3_m12x26x9_sma200_atr20_vol10_gap21_entry78_mbo0_rs63_wmomentum_reset_no_momentum,0.000000,-30.278036,214,90,0.233197,-0.082902,-0.169833,-0.053200
+repair,Overactive,btm_dw21_dt8_r10_st9x3_m12x26x9_sma200_atr20_vol10_gap21_entry78_mbo0_rs63_wmomentum_reset_no_repair,0.000000,-30.278036,703,579,0.203326,-0.112772,-0.131144,-0.014511
+structure,Critical,btm_dw21_dt8_r10_st9x3_m12x26x9_sma200_atr20_vol10_gap21_entry78_mbo0_rs63_wmomentum_reset_no_structure,0.000000,-30.278036,28,-96,0.261485,-0.054613,-0.124127,-0.007493
+ma,Critical,btm_dw21_dt8_r10_st9x3_m12x26x9_sma200_atr20_vol10_gap21_entry78_mbo0_rs63_wmomentum_reset_no_ma,15.483378,-14.794658,179,55,0.234595,-0.081503,-0.132838,-0.016205
+volume,Supportive,btm_dw21_dt8_r10_st9x3_m12x26x9_sma200_atr20_vol10_gap21_entry78_mbo0_rs63_wmomentum_reset_no_volume,25.228389,-5.049648,163,39,0.295930,-0.020168,-0.130378,-0.013745

@@ -1,0 +1,254 @@
+//@version=6
+indicator("AutoQuant Bottom + RS + Observation", overlay=true, max_labels_count=500)
+
+ddWindow = input.int(126, "Drawdown Window", minval=2)
+ddThreshold = input.float(-8, "Drawdown Threshold %", step=0.5)
+rsiPeriod = input.int(10, "RSI Period", minval=2)
+stochPeriod = input.int(21, "Stochastic Period", minval=2)
+stochSmooth = input.int(5, "Stochastic Smooth", minval=1)
+macdFast = input.int(16, "MACD Fast", minval=1)
+macdSlow = input.int(35, "MACD Slow", minval=2)
+macdSignal = input.int(9, "MACD Signal", minval=1)
+smaPeriod = input.int(100, "SMA Period", minval=2)
+atrPeriod = input.int(14, "ATR Period", minval=2)
+volumeWindow = input.int(20, "Volume Window", minval=2)
+bandPeriod = input.int(20, "Band Period", minval=2)
+bandStd = input.float(2, "Band Std Dev", step=0.1)
+marketSymbol1 = input.symbol("QQQ", "Market Symbol 1")
+marketSymbol2 = input.symbol("SPY", "Market Symbol 2")
+marketWindow = input.int(126, "Market Drawdown Window", minval=2)
+marketThreshold = input.float(-20, "Market Drawdown Threshold %", step=0.5)
+rsWindow = input.int(63, "RS Window", minval=2)
+rsDrawdownAdvantageThreshold = input.float(5, "RS Drawdown Advantage %", step=0.5)
+rsRepairAdvantageThreshold = input.float(5, "RS Repair Advantage %", step=0.5)
+rsPullbackWindow = input.int(42, "RS Pullback Window", minval=2)
+rsPullbackMinDrawdown = input.float(5, "RS Pullback Min Drawdown %", step=0.5)
+rsPullbackMaxDrawdown = input.float(18, "RS Pullback Max Drawdown %", step=0.5)
+useRsPullbackRepairV2 = input.bool(false, "Use RS Pullback Repair V2")
+useRsHigherLowStructure = input.bool(true, "Use RS Higher Low Structure")
+useRsRepairTrendConfirm = input.bool(false, "Use RS Repair Trend Confirm")
+useRsMarketDivergence = input.bool(false, "Use RS Market Divergence")
+useRsPostCrashMaReclaim = input.bool(false, "Use RS Post-Crash MA Reclaim")
+useRsVolatilityCompression = input.bool(false, "Use RS Volatility Compression")
+drawdownWeight = input.float(0.3, "Drawdown Weight", step=0.01)
+momentumWeight = input.float(0.22, "Momentum Weight", step=0.01)
+repairWeight = input.float(0.18, "Repair Weight", step=0.01)
+structureWeight = input.float(0.15, "Structure Weight", step=0.01)
+volumeWeight = input.float(0.08, "Volume Weight", step=0.01)
+maWeight = input.float(0.07, "MA Distance Weight", step=0.01)
+watchThreshold = input.int(76, "Watch Score", minval=1, maxval=100)
+mediumThreshold = input.int(80, "Medium Score", minval=1, maxval=100)
+strongThreshold = input.int(75, "Strong Score", minval=1, maxval=100)
+exitThreshold = input.int(70, "Exit Score", minval=1, maxval=100)
+entryThreshold = input.int(82, "Entry Score", minval=1, maxval=100)
+mbEntryOffset = input.int(0, "MB Entry Offset", minval=0, maxval=20)
+minSignalGap = input.int(42, "Min Signal Gap", minval=1)
+obsDeepBottomMin = input.int(66, "OBS-D Bottom Min", minval=1, maxval=100)
+obsShallowBottomMin = input.int(68, "OBS-S Bottom Min", minval=1, maxval=100)
+obsBottomMax = input.int(75, "OBS Bottom Max", minval=1, maxval=100)
+obsDeepMarketMax = input.float(-20, "OBS-D Market Max Drawdown %", step=0.5)
+obsShallowMarketMax = input.float(-8, "OBS-S Market Max Drawdown %", step=0.5)
+obsNearLowWindow = input.int(63, "OBS Near-Low Window", minval=2)
+obsNearLowMax = input.float(0.06, "OBS Near-Low Max Gap", step=0.005)
+obsClusterGap = input.int(42, "OBS Min Signal Gap", minval=1)
+qualityThreshold = input.int(70, "RS Quality Threshold", minval=1, maxval=100)
+showScoreLines = input.bool(false, "Show Score Lines")
+showSignalColors = input.bool(true, "Show Signal Candle Colors")
+showSignalBackground = input.bool(true, "Show Signal Background")
+showSignalTable = input.bool(true, "Show Signal Table")
+showTextMarkers = input.bool(true, "Show Text Markers")
+
+clip01(x) =>
+    math.min(1.0, math.max(0.0, nz(x, 0.0)))
+
+rollingHigh = ta.highest(close, ddWindow)
+drawdown = (close / rollingHigh - 1.0) * 100.0
+rsiValue = ta.rsi(close, rsiPeriod)
+stochRaw = ta.stoch(close, high, low, stochPeriod)
+stochValue = ta.sma(stochRaw, stochSmooth)
+[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)
+smaValue = ta.sma(close, smaPeriod)
+distSma = (close / smaValue - 1.0) * 100.0
+atrValue = ta.atr(atrPeriod)
+volumeSma = ta.sma(volume, volumeWindow)
+volumeRatio = volumeSma == 0 ? 1.0 : volume / volumeSma
+bbBasis = ta.sma(close, bandPeriod)
+bbUpper = bbBasis + bandStd * ta.stdev(close, bandPeriod)
+marketClose1 = request.security(marketSymbol1, timeframe.period, close)
+marketClose2 = request.security(marketSymbol2, timeframe.period, close)
+marketDrawdown1 = (marketClose1 / ta.highest(marketClose1, marketWindow) - 1.0) * 100.0
+marketDrawdown2 = (marketClose2 / ta.highest(marketClose2, marketWindow) - 1.0) * 100.0
+marketDrawdown = math.min(marketDrawdown1, marketDrawdown2)
+marketOk = marketDrawdown <= marketThreshold
+rsMarketDrawdown1 = (marketClose1 / ta.highest(marketClose1, rsWindow) - 1.0) * 100.0
+rsMarketDrawdown2 = (marketClose2 / ta.highest(marketClose2, rsWindow) - 1.0) * 100.0
+rsMarketDrawdown = math.min(rsMarketDrawdown1, rsMarketDrawdown2)
+stockRepair = (close / ta.lowest(close, rsWindow) - 1.0) * 100.0
+marketRepair1 = (marketClose1 / ta.lowest(marketClose1, rsWindow) - 1.0) * 100.0
+marketRepair2 = (marketClose2 / ta.lowest(marketClose2, rsWindow) - 1.0) * 100.0
+marketRepair = math.max(marketRepair1, marketRepair2)
+
+drawdownScore = clip01((-drawdown) / math.abs(ddThreshold))
+rsiScore = clip01((48.0 - rsiValue) / 24.0)
+stochScore = clip01((45.0 - stochValue) / 35.0)
+momentumScore = rsiScore * 0.65 + stochScore * 0.35
+macdRepair = clip01((macdHist - ta.lowest(macdHist, 3)) / 1.5)
+closeRepair = clip01((close / ta.lowest(close, 5) - 1.0) / 0.06)
+repairScore = macdRepair * 0.55 + closeRepair * 0.45
+retestGap = math.abs(low / ta.lowest(low, 21) - 1.0)
+retestScore = clip01((0.08 - retestGap) / 0.08)
+baseNow = close >= ta.lowest(close, 21) * 0.97 and close <= ta.lowest(close, 21) * 1.12 ? 1.0 : 0.0
+baseScore = clip01(ta.sma(baseNow, 10) * 10.0 / 7.0)
+structureScore = retestScore * 0.55 + baseScore * 0.45
+volumeScore = clip01((volumeRatio - 0.9) / 0.8)
+maDiscountScore = clip01((-distSma) / 18.0)
+
+totalWeight = drawdownWeight + momentumWeight + repairWeight + structureWeight + volumeWeight + maWeight
+rawBottom = totalWeight == 0 ? 0.0 : (drawdownScore * drawdownWeight + momentumScore * momentumWeight + repairScore * repairWeight + structureScore * structureWeight + volumeScore * volumeWeight + maDiscountScore * maWeight) / totalWeight
+bottomScore = math.round(math.min(100.0, math.max(1.0, 1.0 + rawBottom * 99.0)))
+rsDrawdownAdvantage = drawdown - rsMarketDrawdown
+rsRepairAdvantage = stockRepair - marketRepair
+rsDrawdownScore = clip01(rsDrawdownAdvantage / rsDrawdownAdvantageThreshold)
+rsRepairScore = clip01(rsRepairAdvantage / rsRepairAdvantageThreshold)
+rsTrendScore = clip01((distSma + 5.0) / 15.0)
+rawRs = rsDrawdownScore * 0.45 + rsRepairScore * 0.45 + rsTrendScore * 0.10
+relativeStrengthScore = math.round(math.min(100.0, math.max(1.0, 1.0 + rawRs * 99.0)))
+priorLow = ta.lowest(low[3], rsWindow)
+higherLowScore = clip01((low / priorLow - 1.0) / 0.08)
+notChasingScore = clip01((0.18 - (close / ta.lowest(close, 21) - 1.0)) / 0.18)
+rsStructureScore = math.round(math.min(100.0, math.max(1.0, 1.0 + (higherLowScore * 0.70 + notChasingScore * 0.30) * 99.0)))
+priorMarketDrawdown = ta.lowest(rsMarketDrawdown[1], rsWindow)
+marketBreakdownScore = clip01((priorMarketDrawdown - rsMarketDrawdown) / 5.0)
+priorStockLow = ta.lowest(low[1], rsWindow)
+stockHoldingScore = clip01((low / priorStockLow - 1.0) / 0.08)
+rsMarketDivergenceScore = math.round(math.min(100.0, math.max(1.0, 1.0 + (stockHoldingScore * 0.60 + marketBreakdownScore * 0.40) * 99.0)))
+priorCrashScore = clip01((ta.highest(-drawdown, rsWindow) - math.abs(ddThreshold)) / 12.0)
+shortReclaimScore = clip01((close / ta.sma(close, 20) - 0.98) / 0.08)
+mediumReclaimScore = clip01((close / ta.sma(close, 50) - 0.98) / 0.10)
+recoverySlopeScore = clip01((close / close[3] - 1.0) / 0.08)
+rsMaReclaimScore = math.round(math.min(100.0, math.max(1.0, 1.0 + priorCrashScore * (shortReclaimScore * 0.45 + mediumReclaimScore * 0.35 + recoverySlopeScore * 0.20) * 99.0)))
+atrPct = atrValue / close
+panicVolatility = ta.highest(atrPct, rsWindow)
+volatilityDropScore = clip01((panicVolatility - atrPct) / 0.04)
+volatilityStabilizedScore = clip01((ta.highest(atrPct, 3) - atrPct) / 0.02)
+rsVolatilityCompressionScore = math.round(math.min(100.0, math.max(1.0, 1.0 + priorCrashScore * (volatilityDropScore * 0.70 + volatilityStabilizedScore * 0.30) * 99.0)))
+recentPullbackDepth = ta.highest(-drawdown, rsPullbackWindow)
+pullbackDeepEnough = clip01((recentPullbackDepth - rsPullbackMinDrawdown) / rsPullbackMinDrawdown)
+pullbackRange = math.max(1.0, rsPullbackMaxDrawdown - rsPullbackMinDrawdown)
+pullbackNotTooDeep = clip01((rsPullbackMaxDrawdown - recentPullbackDepth) / pullbackRange)
+pullbackDepthScore = pullbackDeepEnough * pullbackNotTooDeep
+pullbackRepairScore = clip01((close / ta.lowest(close, 10) - 1.0) / 0.08)
+pullbackMaScore = clip01((distSma + 8.0) / 18.0)
+pullbackNotChasingScore = clip01((0.16 - (close / ta.lowest(close, 21) - 1.0)) / 0.16)
+rsPullbackScore = math.round(math.min(100.0, math.max(1.0, 1.0 + (rawRs * 0.35 + pullbackDepthScore * 0.25 + pullbackRepairScore * 0.20 + pullbackMaScore * 0.15 + pullbackNotChasingScore * 0.05) * 99.0)))
+rsMacdConfirmation = clip01((macdHist - ta.lowest(macdHist, 5)) / 1.5)
+rsTrendConfirmation = clip01((distSma + 3.0) / 12.0)
+rsPriceRepairConfirmation = clip01((close / ta.lowest(close, 10) - 1.0) / 0.08)
+rsConfirmationScore = math.round(math.min(100.0, math.max(1.0, 1.0 + (rsMacdConfirmation * 0.45 + rsTrendConfirmation * 0.35 + rsPriceRepairConfirmation * 0.20) * 99.0)))
+rsSignalScore = useRsPullbackRepairV2 ? math.round(math.min(100.0, math.max(1.0, bottomScore * 0.35 + relativeStrengthScore * 0.25 + rsStructureScore * 0.10 + rsPullbackScore * 0.30))) : useRsVolatilityCompression ? math.round(math.min(100.0, math.max(1.0, bottomScore * 0.45 + relativeStrengthScore * 0.25 + rsStructureScore * 0.10 + rsVolatilityCompressionScore * 0.20))) : useRsPostCrashMaReclaim ? math.round(math.min(100.0, math.max(1.0, bottomScore * 0.45 + relativeStrengthScore * 0.25 + rsStructureScore * 0.10 + rsMaReclaimScore * 0.20))) : useRsMarketDivergence ? math.round(math.min(100.0, math.max(1.0, bottomScore * 0.45 + relativeStrengthScore * 0.30 + rsStructureScore * 0.10 + rsMarketDivergenceScore * 0.15))) : useRsRepairTrendConfirm ? math.round(math.min(100.0, math.max(1.0, bottomScore * 0.45 + relativeStrengthScore * 0.30 + rsStructureScore * 0.10 + rsConfirmationScore * 0.15))) : useRsHigherLowStructure ? math.round(math.min(100.0, math.max(1.0, bottomScore * 0.50 + relativeStrengthScore * 0.35 + rsStructureScore * 0.15))) : math.round(math.min(100.0, math.max(1.0, bottomScore * 0.55 + relativeStrengthScore * 0.45)))
+
+recentGain = clip01((close / close[63] - 1.0) / 0.28)
+rsiHot = clip01((rsiValue - 68.0) / 14.0)
+maStretch = clip01(distSma / 18.0)
+macdWeakening = clip01((ta.highest(macdHist, 5) - macdHist) / 1.2)
+bandStretch = clip01((close / bbUpper - 1.0) / 0.04)
+atrHot = clip01((atrValue / close) / 0.06)
+rawExit = recentGain * 0.22 + rsiHot * 0.24 + maStretch * 0.20 + macdWeakening * 0.16 + bandStretch * 0.12 + atrHot * 0.06
+exitScore = math.round(math.min(100.0, math.max(1.0, 1.0 + rawExit * 99.0)))
+
+mbCandidate = marketOk and bottomScore >= watchThreshold
+rsCandidate = rsSignalScore >= watchThreshold
+var int lastMbSignalBar = na
+var int lastRsSignalBar = na
+mbGapOk = na(lastMbSignalBar) or bar_index - lastMbSignalBar >= minSignalGap
+rsGapOk = na(lastRsSignalBar) or bar_index - lastRsSignalBar >= minSignalGap
+mbSignal = mbCandidate and mbGapOk
+rsSignal = rsCandidate and rsGapOk
+if mbSignal
+    lastMbSignalBar := bar_index
+if rsSignal
+    lastRsSignalBar := bar_index
+
+mbWatchSignal = mbSignal and bottomScore >= watchThreshold and bottomScore < mediumThreshold
+mbEntryThreshold = entryThreshold + mbEntryOffset
+mbMediumSignal = mbSignal and bottomScore >= mediumThreshold and bottomScore < mbEntryThreshold
+mbStrongSignal = mbSignal and bottomScore >= mbEntryThreshold
+rsWatchSignal = rsSignal and rsSignalScore >= watchThreshold and rsSignalScore < mediumThreshold
+rsMediumSignal = rsSignal and rsSignalScore >= mediumThreshold and rsSignalScore < entryThreshold
+rsStrongSignal = rsSignal and rsSignalScore >= entryThreshold
+trendDamage = distSma < -32.0
+lowVolume = volumeRatio < 0.75
+noRepair = repairScore < 0.25 and drawdown <= ddThreshold
+overextendedRebound = (close / ta.lowest(close, 10) - 1.0) >= 0.12 and distSma > 0 and drawdown > ddThreshold * 1.5
+riskPenalty = (trendDamage ? 25.0 : 0.0) + (noRepair ? 18.0 : 0.0) + (lowVolume ? 10.0 : 0.0) + (overextendedRebound ? 16.0 : 0.0)
+tierBonus = rsSignalScore >= mediumThreshold ? 3.0 : 0.0
+rsQualityScore = math.round(math.min(100.0, math.max(1.0, relativeStrengthScore * 0.45 + rsSignalScore * 0.30 + bottomScore * 0.15 + tierBonus - riskPenalty)))
+rsQualified = rsSignalScore >= watchThreshold and rsQualityScore >= qualityThreshold
+rsRisk = rsSignalScore >= watchThreshold and rsQualityScore < qualityThreshold
+rsWatchlistSignal = rsQualified ? "RS-Q" : rsRisk ? "RS-R" : "None"
+nearLowGap = close / ta.lowest(close, obsNearLowWindow) - 1.0
+obsDeepCandidate = marketDrawdown <= obsDeepMarketMax and bottomScore >= obsDeepBottomMin and bottomScore <= obsBottomMax and nearLowGap <= obsNearLowMax
+obsShallowCandidate = marketDrawdown > obsDeepMarketMax and marketDrawdown <= obsShallowMarketMax and bottomScore >= obsShallowBottomMin and bottomScore <= obsBottomMax and nearLowGap <= obsNearLowMax
+var int lastObsSignalBar = na
+obsGapOk = na(lastObsSignalBar) or bar_index - lastObsSignalBar >= obsClusterGap
+obsDeepSecondTest = obsDeepCandidate and obsGapOk and not mbStrongSignal and not rsStrongSignal
+obsShallowPullback = obsShallowCandidate and obsGapOk and not mbStrongSignal and not rsStrongSignal and not obsDeepSecondTest
+if obsDeepSecondTest or obsShallowPullback
+    lastObsSignalBar := bar_index
+observationSignal = obsDeepSecondTest ? "OBS-D" : obsShallowPullback ? "OBS-S" : "None"
+exitSignal = exitScore >= exitThreshold
+
+showRsStrong = rsStrongSignal
+showMbStrong = mbStrongSignal and not showRsStrong
+showRsMedium = rsMediumSignal and not showRsStrong and not showMbStrong
+showMbMedium = mbMediumSignal and not showRsStrong and not showMbStrong and not showRsMedium
+showObsDeep = obsDeepSecondTest and not showRsStrong and not showMbStrong
+showObsShallow = obsShallowPullback and not showRsStrong and not showMbStrong and not showObsDeep
+showRsQualified = rsQualified and not showRsStrong and not showMbStrong and not showObsDeep and not showObsShallow
+showRsRisk = rsRisk and not showRsStrong and not showMbStrong and not showObsDeep and not showObsShallow and not showRsQualified
+showRsWatch = rsWatchSignal and not showRsStrong and not showMbStrong and not showRsMedium and not showMbMedium and not showObsDeep and not showObsShallow and not showRsQualified and not showRsRisk
+showMbWatch = mbWatchSignal and not showRsStrong and not showMbStrong and not showRsMedium and not showMbMedium and not showObsDeep and not showObsShallow and not showRsQualified and not showRsRisk and not showRsWatch
+
+signalName = showRsStrong ? "RS-3" : showMbStrong ? "MB-3" : showObsDeep ? "OBS-D" : showObsShallow ? "OBS-S" : exitSignal ? "X" : showRsQualified ? "RS-Q" : showRsRisk ? "RS-R" : showRsMedium ? "RS-2" : showMbMedium ? "MB-2" : showRsWatch ? "RS-1" : showMbWatch ? "MB-1" : "None"
+signalColor = showRsStrong ? color.aqua : showMbStrong ? color.green : showObsDeep ? color.new(color.green, 0) : showObsShallow ? color.new(color.lime, 0) : exitSignal ? color.red : showRsQualified ? color.blue : showRsRisk ? color.purple : showRsMedium ? color.new(color.aqua, 15) : showMbMedium ? color.new(color.green, 15) : showRsWatch ? color.new(color.aqua, 35) : showMbWatch ? color.new(color.green, 35) : na
+barcolor(showSignalColors ? signalColor : na)
+bgcolor(showSignalBackground and signalName == "X" ? color.new(color.red, 84) : showSignalBackground and signalName != "None" ? color.new(signalColor, 88) : na)
+
+var table signalTable = table.new(position.top_right, 2, 7, border_width=1)
+if barstate.islast and showSignalTable
+    table.cell(signalTable, 0, 0, "Signal", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 0, signalName, text_color=color.white, bgcolor=signalName == "None" ? color.new(color.gray, 35) : color.new(signalColor, 0))
+    table.cell(signalTable, 0, 1, "Bottom", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 1, str.tostring(bottomScore), text_color=color.white, bgcolor=color.new(color.green, 65))
+    table.cell(signalTable, 0, 2, "RS", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 2, str.tostring(rsSignalScore), text_color=color.black, bgcolor=color.new(color.aqua, 55))
+    table.cell(signalTable, 0, 3, "Observation", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 3, observationSignal, text_color=color.black, bgcolor=observationSignal == "OBS-D" ? color.new(color.green, 25) : observationSignal == "OBS-S" ? color.new(color.lime, 20) : color.new(color.gray, 35))
+    table.cell(signalTable, 0, 4, "Market DD", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 4, str.tostring(marketDrawdown, "#.##") + "%", text_color=color.white, bgcolor=color.new(color.blue, 65))
+    table.cell(signalTable, 0, 5, "RS Quality", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 5, rsWatchlistSignal + " " + str.tostring(rsQualityScore), text_color=color.white, bgcolor=color.new(color.blue, 65))
+    table.cell(signalTable, 0, 6, "Exit", text_color=color.white, bgcolor=color.new(color.black, 0))
+    table.cell(signalTable, 1, 6, str.tostring(exitScore), text_color=color.white, bgcolor=color.new(color.red, 65))
+
+plot(showScoreLines ? bottomScore : na, "Bottom Score", color=color.new(color.green, 0), linewidth=1, display=display.data_window)
+plot(showScoreLines ? relativeStrengthScore : na, "Relative Strength Score", color=color.new(color.aqua, 0), linewidth=1, display=display.data_window)
+plot(showScoreLines ? exitScore : na, "Exit Score", color=color.new(color.red, 0), linewidth=1, display=display.data_window)
+plotshape(showTextMarkers and showMbWatch, "MB-1", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 35), text="MB-1", textcolor=color.white, size=size.tiny)
+plotshape(showTextMarkers and showMbMedium, "MB-2", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 15), text="MB-2", textcolor=color.white, size=size.small)
+plotshape(showTextMarkers and showMbStrong, "MB-3", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), text="MB-3", textcolor=color.white, size=size.normal)
+plotshape(showTextMarkers and showObsDeep, "OBS-D", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), text="OBS-D", textcolor=color.white, size=size.small)
+plotshape(showTextMarkers and showObsShallow, "OBS-S", style=shape.labelup, location=location.belowbar, color=color.new(color.lime, 0), text="OBS-S", textcolor=color.black, size=size.small)
+plotshape(showTextMarkers and showRsQualified, "RS-Q", style=shape.labelup, location=location.belowbar, color=color.new(color.blue, 0), text="RS-Q", textcolor=color.white, size=size.small)
+plotshape(showTextMarkers and showRsRisk, "RS-R", style=shape.labelup, location=location.belowbar, color=color.new(color.purple, 0), text="RS-R", textcolor=color.white, size=size.small)
+plotshape(showTextMarkers and showRsWatch, "RS-1", style=shape.labelup, location=location.belowbar, color=color.new(color.aqua, 35), text="RS-1", textcolor=color.black, size=size.tiny)
+plotshape(showTextMarkers and showRsMedium, "RS-2", style=shape.labelup, location=location.belowbar, color=color.new(color.aqua, 15), text="RS-2", textcolor=color.black, size=size.small)
+plotshape(showTextMarkers and showRsStrong, "RS-3", style=shape.labelup, location=location.belowbar, color=color.new(color.aqua, 0), text="RS-3", textcolor=color.black, size=size.normal)
+plotshape(showTextMarkers and exitSignal, "Exit", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="X", textcolor=color.white, size=size.small)
+
+alertcondition(mbStrongSignal, "MB Strong", "AutoQuant MB Strong signal")
+alertcondition(rsStrongSignal, "RS Strong", "AutoQuant RS Strong signal")
+alertcondition(obsDeepSecondTest, "OBS Deep Second Test", "AutoQuant OBS-D deep second-test observation")
+alertcondition(obsShallowPullback, "OBS Shallow Pullback", "AutoQuant OBS-S shallow pullback observation")
+alertcondition(rsQualified, "RS Watchlist Qualified", "AutoQuant RS-Q watchlist quality signal")
+alertcondition(rsRisk, "RS Watchlist Risk", "AutoQuant RS-R watchlist risk signal")

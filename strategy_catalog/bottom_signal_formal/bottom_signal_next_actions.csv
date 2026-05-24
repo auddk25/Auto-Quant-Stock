@@ -1,0 +1,20 @@
+priority,role,category,target,action,reason,evidence
+1,FormalStrategy,MB,drawdown,Keep,Critical factor from MB ablation,compositeDelta=-27.95; signalCountDelta=-37
+1,FormalStrategy,MB,momentum,Keep,Critical factor from MB ablation,compositeDelta=-27.95; signalCountDelta=+7
+1,FormalStrategy,MB,structure,Keep,Critical factor from MB ablation,compositeDelta=-27.95; signalCountDelta=-31
+1,FormalStrategy,MB,volume,Keep,Critical factor from MB ablation,compositeDelta=-27.95; signalCountDelta=-18
+1,FormalStrategy,MB,ma,Keep,Critical factor from MB ablation,compositeDelta=-27.95; signalCountDelta=-22
+1,FormalStrategy,MB,repair,Keep brake,Overactive factor from MB ablation,compositeDelta=-27.95; signalCountDelta=+86
+2,Observation,RS,AVGO,Monitor,Priority RS ticker,selectionScore=92.40; qualifiedCount=2; reason=repeated qualified candidates with clean risk profile
+2,Observation,RS,META,Monitor,Priority RS ticker,selectionScore=92.11; qualifiedCount=2; reason=repeated qualified candidates with clean risk profile
+3,Observation,RS,CRM,Review,Watch RS ticker,selectionScore=79.71; qualifiedCount=2; reason=qualified but has risk flags
+3,Observation,RS,PLTR,Review,Watch RS ticker,selectionScore=73.24; qualifiedCount=1; reason=qualified but quality score is below priority
+3,Observation,RS,AMZN,Review,Watch RS ticker,selectionScore=66.77; qualifiedCount=1; reason=qualified watchlist candidate
+3,Observation,RS,TSLA,Review,Watch RS ticker,selectionScore=62.33; qualifiedCount=1; reason=qualified watchlist candidate
+3,Observation,RS,AAPL,Review,Watch RS ticker,selectionScore=59.07; qualifiedCount=1; reason=qualified but has risk flags
+3,Observation,RS,V,Review,Watch RS ticker,selectionScore=57.94; qualifiedCount=1; reason=qualified but has risk flags
+3,Observation,RS,JPM,Review,Watch RS ticker,selectionScore=56.34; qualifiedCount=1; reason=qualified but has risk flags
+4,Observation,RS,CAT,Skip,Avoid RS ticker,selectionScore=50.93; reason=no qualified RS candidates
+4,Observation,RS,NVDA,Skip,Avoid RS ticker,selectionScore=49.46; reason=no qualified RS candidates
+4,Observation,RS,CRWD,Skip,Avoid RS ticker,selectionScore=38.20; reason=no qualified RS candidates
+5,Validation,RecentValidation,Pass,Continue observation,Recent validation passed,status=Pass; matureCount=7; winRate=100.00%; avgFwd126=75.79%

@@ -1,0 +1,106 @@
+step,section,role,target,action,evidence
+1,Baseline,FormalStrategy,seed_previous_rs_higher_low_best,Freeze formal MB baseline,fullPool=True; symbols=21; signals=39; avgFwd126=39.24%
+2,RecentValidation,FormalStrategy,AAPL 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=0.365954; adverse126=-0.084722; channel=MB; risk=no_repair
+2,RecentValidation,FormalStrategy,AVGO 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=1.302658; adverse126=0.000000; channel=MB; risk=no_repair
+2,RecentValidation,FormalStrategy,CAT 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=0.734201; adverse126=-0.049084; channel=MB; risk=no_repair
+2,RecentValidation,FormalStrategy,META 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=0.419955; adverse126=-0.039764; channel=MB; risk=no_repair
+2,RecentValidation,FormalStrategy,NVDA 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=0.967589; adverse126=0.000000; channel=MB; risk=no_repair
+2,RecentValidation,FormalStrategy,QQQ 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=0.441072; adverse126=-0.015639; channel=MB; risk=no_repair
+2,RecentValidation,FormalStrategy,TSM 2025-04-04,Review mature recent formal signal,status=Pass; fwd126=1.074000; adverse126=-0.036989; channel=MB; risk=no_repair
+3,ObservationRisk,Observation,risk=low_volume,Keep observation-only bucket,count=1; avgFwd126=52.15%; winRate126=100.00%; avgAdverse126=-3.75%
+3,ObservationRisk,Observation,risk=no_repair,Keep observation-only bucket,count=45; avgFwd126=19.38%; winRate126=72.73%; avgAdverse126=-10.98%
+3,ObservationRisk,Observation,risk=none,Keep observation-only bucket,count=3; avgFwd126=14.86%; winRate126=66.67%; avgAdverse126=-10.51%
+3,ObservationRisk,Observation,risk=trend_damage,Keep observation-only bucket,count=3; avgFwd126=48.59%; winRate126=66.67%; avgAdverse126=-21.47%
+4,RSWatchlist,Observation,AVGO,Monitor,selectionScore=92.40; qualifiedCount=2; reason=repeated qualified candidates with clean risk profile
+4,RSWatchlist,Observation,META,Monitor,selectionScore=92.11; qualifiedCount=2; reason=repeated qualified candidates with clean risk profile
+4,RSWatchlist,Observation,CRM,Review,selectionScore=79.71; qualifiedCount=2; reason=qualified but has risk flags
+4,RSWatchlist,Observation,PLTR,Review,selectionScore=73.24; qualifiedCount=1; reason=qualified but quality score is below priority
+4,RSWatchlist,Observation,AMZN,Review,selectionScore=66.77; qualifiedCount=1; reason=qualified watchlist candidate
+4,RSWatchlist,Observation,TSLA,Review,selectionScore=62.33; qualifiedCount=1; reason=qualified watchlist candidate
+4,RSWatchlist,Observation,AAPL,Review,selectionScore=59.07; qualifiedCount=1; reason=qualified but has risk flags
+4,RSWatchlist,Observation,V,Review,selectionScore=57.94; qualifiedCount=1; reason=qualified but has risk flags
+4,RSWatchlist,Observation,JPM,Review,selectionScore=56.34; qualifiedCount=1; reason=qualified but has risk flags
+4,RSWatchlist,Observation,CAT,Skip,selectionScore=50.93; qualifiedCount=0; reason=no qualified RS candidates
+4,RSWatchlist,Observation,NVDA,Skip,selectionScore=49.46; qualifiedCount=0; reason=no qualified RS candidates
+4,RSWatchlist,Observation,CRWD,Skip,selectionScore=38.20; qualifiedCount=0; reason=no qualified RS candidates
+5,MissedCase,Observation,AMD 2008-07-01 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.608850; adverse126=-0.681416; bottom=75; RS=42
+5,MissedCase,Observation,LLY 2008-09-17 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.255226; adverse126=-0.357243; bottom=75; RS=48
+5,MissedCase,Observation,SPY 2008-10-16 OBS-D,Record formal-missed OBS candidate,risk=none; duplicateFormalCount=0; fwd126=-0.096627; adverse126=-0.267752; bottom=75; RS=46
+5,MissedCase,Observation,WMT 2009-01-08 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.063910; adverse126=-0.096535; bottom=75; RS=51
+5,MissedCase,Observation,CAT 2009-02-19 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.714542; adverse126=-0.179497; bottom=75; RS=42
+5,MissedCase,Observation,WMT 2009-04-24 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.066025; adverse126=-0.000909; bottom=71; RS=45
+5,MissedCase,Observation,XOM 2010-01-29 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.061349; adverse126=-0.110263; bottom=75; RS=42
+5,MissedCase,Observation,MSFT 2010-05-07 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.028434; adverse126=-0.180651; bottom=75; RS=42
+5,MissedCase,Observation,XOM 2010-06-29 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.298847; adverse126=-0.012568; bottom=75; RS=42
+5,MissedCase,Observation,AMD 2010-08-25 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.484502; adverse126=-0.084829; bottom=75; RS=42
+5,MissedCase,Observation,QQQ 2011-03-16 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.026083; adverse126=-0.072707; bottom=75; RS=43
+5,MissedCase,Observation,NVDA 2011-06-15 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.157424; adverse126=-0.300536; bottom=75; RS=42
+5,MissedCase,Observation,TSLA 2011-08-05 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.311881; adverse126=-0.094472; bottom=75; RS=42
+5,MissedCase,Observation,JPM 2011-09-21 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.495296; adverse126=-0.056367; bottom=75; RS=42
+5,MissedCase,Observation,AVGO 2011-11-18 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.055313; adverse126=-0.073489; bottom=74; RS=52
+5,MissedCase,Observation,TSM 2012-05-31 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.303133; adverse126=-0.051711; bottom=75; RS=42
+5,MissedCase,Observation,AMD 2012-07-25 OBS-S,Record formal-missed OBS candidate,"risk=trend_damage,no_repair; duplicateFormalCount=0; fwd126=-0.296758; adverse126=-0.536160; bottom=75; RS=42"
+5,MissedCase,Observation,AMD 2012-11-07 OBS-S,Record formal-missed OBS candidate,"risk=trend_damage,no_repair; duplicateFormalCount=0; fwd126=0.965174; adverse126=-0.074627; bottom=74; RS=42"
+5,MissedCase,Observation,QQQ 2014-10-16 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.179314; adverse126=0.000000; bottom=74; RS=42
+5,MissedCase,Observation,AVGO 2015-08-24 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.192936; adverse126=-0.013007; bottom=75; RS=42
+5,MissedCase,Observation,TSM 2016-01-07 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.314373; adverse126=-0.029384; bottom=75; RS=43
+5,MissedCase,Observation,AAPL 2016-05-04 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.197330; adverse126=-0.035035; bottom=70; RS=42
+5,MissedCase,Observation,TSLA 2016-06-24 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.079213; adverse126=-0.060575; bottom=75; RS=42
+5,MissedCase,Observation,LLY 2018-02-09 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.360636; adverse126=-0.011985; bottom=74; RS=42
+5,MissedCase,Observation,QQQ 2018-03-23 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.161462; adverse126=-0.018926; bottom=75; RS=53
+5,MissedCase,Observation,JPM 2018-10-11 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.032839; adverse126=-0.147878; bottom=75; RS=49
+5,MissedCase,Observation,AMZN 2018-12-24 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.412118; adverse126=0.000000; bottom=75; RS=42
+5,MissedCase,Observation,AAPL 2019-01-07 OBS-S,Record formal-missed OBS candidate,risk=none; duplicateFormalCount=0; fwd126=0.371468; adverse126=0.000000; bottom=70; RS=39
+5,MissedCase,Observation,TSLA 2019-05-31 OBS-S,Record formal-missed OBS candidate,"risk=trend_damage,no_repair; duplicateFormalCount=0; fwd126=0.789209; adverse126=-0.033431; bottom=75; RS=42"
+5,MissedCase,Observation,MSFT 2020-03-12 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.484538; adverse126=-0.026176; bottom=75; RS=44
+5,MissedCase,Observation,XOM 2020-09-11 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.704534; adverse126=-0.144444; bottom=75; RS=42
+5,MissedCase,Observation,LLY 2020-10-30 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.456055; adverse126=0.000000; bottom=75; RS=42
+5,MissedCase,Observation,AMD 2021-03-04 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.414662; adverse126=-0.059936; bottom=75; RS=42
+5,MissedCase,Observation,JPM 2022-01-18 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.230451; adverse126=-0.274391; bottom=75; RS=42
+5,MissedCase,Observation,TSM 2022-03-14 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.198316; adverse126=-0.231377; bottom=73; RS=42
+5,MissedCase,Observation,QQQ 2022-04-26 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.100498; adverse126=-0.174779; bottom=75; RS=42
+5,MissedCase,Observation,AAPL 2022-06-13 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.098959; adverse126=-0.013801; bottom=75; RS=42
+5,MissedCase,Observation,CAT 2022-07-14 OBS-D,Record formal-missed OBS candidate,"risk=low_volume,no_repair; duplicateFormalCount=0; fwd126=0.521508; adverse126=-0.037476; bottom=73; RS=42"
+5,MissedCase,Observation,QQQ 2022-10-03 OBS-D,Record formal-missed OBS candidate,risk=none; duplicateFormalCount=0; fwd126=0.171093; adverse126=-0.047673; bottom=68; RS=38
+5,MissedCase,Observation,QQQ 2022-10-11 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.219522; adverse126=-0.008601; bottom=69; RS=40
+5,MissedCase,Observation,QQQ 2022-12-28 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.424450; adverse126=0.000000; bottom=68; RS=42
+5,MissedCase,Observation,MSFT 2023-01-05 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.499655; adverse126=0.000000; bottom=73; RS=47
+5,MissedCase,Observation,AAPL 2023-10-26 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.042305; adverse126=-0.008759; bottom=75; RS=42
+5,MissedCase,Observation,AMD 2024-08-02 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.098113; adverse126=-0.138340; bottom=75; RS=42
+5,MissedCase,Observation,AVGO 2024-09-06 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.395812; adverse126=0.000000; bottom=70; RS=48
+5,MissedCase,Observation,XOM 2025-04-07 OBS-D,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=0.130614; adverse126=-0.029240; bottom=75; RS=58
+5,MissedCase,Observation,UNH 2025-04-17 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=-0.204164; adverse126=-0.472687; bottom=75; RS=46
+5,MissedCase,Observation,QQQ 2026-03-27 OBS-S,Record formal-missed OBS candidate,risk=no_repair; duplicateFormalCount=0; fwd126=; adverse126=-0.007643; bottom=71; RS=40
+6,CandidateRule,Validation,OBS/RS promotion,Open separate validation plan before promotion,current review is observation-only
+7,ValidationGate,Validation,baselineName,Pass,seed_previous_rs_higher_low_best
+7,ValidationGate,Validation,fullPool,Pass,symbols=21 sample=FULL_POOL
+7,ValidationGate,Validation,entryThreshold,Pass,threshold=82
+7,ValidationGate,Validation,formalSignalCap,Pass,signals=39 limit=40
+7,ValidationGate,Validation,duplicateFormal,Pass,duplicateFormalCount=0
+7,ValidationGate,Validation,qqq2022Q4Coverage,Pass,"2022-10-03, 2022-10-11, 2022-12-28"
+7,ValidationGate,Validation,qqq2026MarchCoverage,Pass,2026-03-27
+8,PromotionPrecondition,Validation,OBS/RS promotion,Required,OBS/RS ablation against frozen MB baseline
+8,PromotionPrecondition,Validation,OBS/RS promotion,Required,recent validation keeps formal signal count controlled
+8,PromotionPrecondition,Validation,OBS/RS promotion,Required,sample-out validation before formal promotion
+8,PromotionPrecondition,Validation,OBS/RS promotion,Required,Pine parity check before operator use
+9,RetiredArtifact,Validation,bottom_signal_results_dual_track_rs.json,Pass,absent
+9,RetiredArtifact,Validation,bottom_signal_report_dual_track_rs.md,Pass,absent
+10,ValidationCommand,Operator,minimum,Run,.venv\Scripts\python.exe -m unittest tests.test_bottom_signal_search
+10,ValidationCommand,Operator,repo-wide,Run,".venv\Scripts\python.exe -m unittest discover -s tests -p ""test*.py"""
+10,ValidationCommand,Operator,minimum,Run,.venv\Scripts\python.exe -m py_compile investigations\bottom_signal_model.py investigations\bottom_signal_paths.py investigations\bottom_signal_search.py tests\test_bottom_signal_search.py
+10,ValidationCommand,Operator,minimum,Run,.venv\Scripts\python.exe -m json.tool strategy_catalog\bottom_signal_formal\bottom_signal_results.json > $null
+10,ValidationCommand,Operator,minimum,Run,git diff --check
+10,ValidationCommand,Operator,minimum,Run,git diff --name-only -- config.py prepare.py run.py versions
+10,ValidationCommand,Operator,full-search,Run only after search logic/config changes,.venv\Scripts\python.exe investigations\bottom_signal_search.py --symbol all --max-configs 720 --workers 4
+10,ValidationCommand,Operator,full-search,Run only after search logic/config changes,.venv\Scripts\python.exe investigations\bottom_signal_search.py --symbol all --refresh-observation-search
+11,MainArtifact,Validation,bottom_signal_search.py,Pass,script exists
+11,MainArtifact,Validation,bottom_signal_config.json,Pass,config exists
+11,MainArtifact,Validation,bottom_signal_results.json,Pass,results exists
+11,MainArtifact,Validation,bottom_signal_report.md,Pass,report exists
+11,MainArtifact,Validation,bottom_signal_observation_report.md,Pass,observation-report exists
+12,PlanStepStatus,Validation,1 Baseline confirmation,Done,seed_previous_rs_higher_low_best; symbols=21; signals=39
+12,PlanStepStatus,Validation,2 Recent sample review,Done,mature=7; status=Pass
+12,PlanStepStatus,Validation,3 OBS candidate segmentation,Done,signals=48; riskBuckets=4
+12,PlanStepStatus,Validation,4 RS watchlist review,Done,monitor=2; review=7; skip=3
+12,PlanStepStatus,Validation,5 Formal-missed OBS cases,Done,cases=48
+12,PlanStepStatus,Validation,6 Promotion validation plan,Done,preconditions=4

@@ -1,0 +1,19 @@
+priority,role,category,target,action,reason,evidence
+1,FormalStrategy,MB,drawdown,Keep,Critical factor from MB ablation,compositeDelta=-30.28; signalCountDelta=-116
+1,FormalStrategy,MB,structure,Keep,Critical factor from MB ablation,compositeDelta=-30.28; signalCountDelta=-96
+1,FormalStrategy,MB,ma,Keep,Critical factor from MB ablation,compositeDelta=-14.79; signalCountDelta=+55
+1,FormalStrategy,MB,momentum,Keep brake,Overactive factor from MB ablation,compositeDelta=-30.28; signalCountDelta=+90
+1,FormalStrategy,MB,repair,Keep brake,Overactive factor from MB ablation,compositeDelta=-30.28; signalCountDelta=+579
+3,Observation,RS,AAPL,Review,Watch RS ticker,selectionScore=87.69; qualifiedCount=3; reason=qualified watchlist candidate
+3,Observation,RS,AVGO,Review,Watch RS ticker,selectionScore=79.09; qualifiedCount=2; reason=qualified but has risk flags
+3,Observation,RS,META,Review,Watch RS ticker,selectionScore=79.07; qualifiedCount=3; reason=qualified but has risk flags
+3,Observation,RS,JPM,Review,Watch RS ticker,selectionScore=74.55; qualifiedCount=1; reason=qualified but quality score is below priority
+3,Observation,RS,NVDA,Review,Watch RS ticker,selectionScore=71.59; qualifiedCount=1; reason=qualified but quality score is below priority
+3,Observation,RS,AMZN,Review,Watch RS ticker,selectionScore=67.26; qualifiedCount=1; reason=qualified watchlist candidate
+3,Observation,RS,CAT,Review,Watch RS ticker,selectionScore=61.11; qualifiedCount=1; reason=qualified but has risk flags
+3,Observation,RS,TSM,Review,Watch RS ticker,selectionScore=56.60; qualifiedCount=1; reason=qualified but has risk flags
+4,Observation,RS,TSLA,Skip,Avoid RS ticker,selectionScore=84.59; reason=qualified but adverse drawdown is high
+4,Observation,RS,PLTR,Skip,Avoid RS ticker,selectionScore=59.46; reason=qualified but has risk flags
+4,Observation,RS,WMT,Skip,Avoid RS ticker,selectionScore=55.93; reason=no qualified RS candidates
+4,Observation,RS,CRM,Skip,Avoid RS ticker,selectionScore=55.65; reason=qualified but has risk flags
+5,Validation,RecentValidation,Pass,Continue observation,Recent validation passed,status=Pass; matureCount=18; winRate=88.89%; avgFwd126=47.85%

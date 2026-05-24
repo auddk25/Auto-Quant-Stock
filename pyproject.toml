@@ -10,6 +10,8 @@ dependencies = [
     "pandas>=2.2",
     "numpy>=1.26",
     "pyarrow>=14.0",
+    "ta>=0.11.0",
+    "pandas-ta-classic>=0.5.44",
 ]
 
 [tool.uv]

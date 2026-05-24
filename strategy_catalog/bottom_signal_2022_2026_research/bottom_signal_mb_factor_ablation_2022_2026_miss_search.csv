@@ -1,0 +1,7 @@
+factor,impactLabel,configName,compositeScore,compositeDelta,signalCount,signalCountDelta,avgFwd126,avgFwd126Delta,avgAdverse126,avgAdverse126Delta
+drawdown,Critical,seed_previous_rs_higher_low_best_no_drawdown,-0.000000,-27.949711,2,-37,-0.061471,-0.453859,-0.114068,0.023903
+momentum,Critical,seed_previous_rs_higher_low_best_no_momentum,0.000000,-27.949711,46,7,0.407346,0.014958,-0.161574,-0.023603
+repair,Overactive,seed_previous_rs_higher_low_best_no_repair,0.000000,-27.949711,125,86,0.187122,-0.205266,-0.149980,-0.012009
+structure,Critical,seed_previous_rs_higher_low_best_no_structure,0.000000,-27.949711,8,-31,0.659581,0.267193,-0.148385,-0.010414
+volume,Critical,seed_previous_rs_higher_low_best_no_volume,0.000000,-27.949711,21,-18,0.649379,0.256991,-0.147318,-0.009347
+ma,Critical,seed_previous_rs_higher_low_best_no_ma,0.000000,-27.949711,17,-22,0.379755,-0.012633,-0.141589,-0.003618

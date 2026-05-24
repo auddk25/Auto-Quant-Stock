@@ -1,0 +1,93 @@
+//@version=5
+indicator("Buy-the-Dip DCA Signal v2", overlay=true, max_labels_count=500)
+
+// ═══════════════════════════════════════════════════════
+// Inputs (optimized by grid search on QQQ)
+// ═══════════════════════════════════════════════════════
+w_rsi      = input.float(0.20, "RSI Weight",        minval=0, maxval=1, step=0.05)
+w_keltner  = input.float(0.15, "Keltner Weight",    minval=0, maxval=1, step=0.05)
+w_sma200   = input.float(0.15, "SMA200 Weight",     minval=0, maxval=1, step=0.05)
+w_drawdown = input.float(0.10, "Drawdown Weight",   minval=0, maxval=1, step=0.05)
+w_atr      = input.float(0.25, "ATR Vol Weight",     minval=0, maxval=1, step=0.05)
+w_stoch    = input.float(0.15, "Stochastic Weight",  minval=0, maxval=1, step=0.05)
+threshold  = input.float(50, "Buy Threshold",     minval=10, maxval=90, step=5)
+
+// ═══════════════════════════════════════════════════════
+// Indicators
+// ═══════════════════════════════════════════════════════
+rsi_val    = ta.rsi(close, 14)
+stoch_val  = ta.stoch(close, high, low, 14)
+
+// Keltner Channel (EMA20 ± 2*ATR20)
+ema20_val  = ta.ema(close, 20)
+atr20_val  = ta.atr(20)
+kelt_lower = ema20_val - 2 * atr20_val
+kelt_atr_dist = (ema20_val - close) / atr20_val
+
+// ATR volatility ratio: ATR(14) / SMA(ATR(14), 70)
+atr14_val  = ta.atr(14)
+atr70_avg  = ta.sma(atr14_val, 70)
+atr_ratio  = atr14_val / atr70_avg
+
+// SMA 200 distance
+sma200      = ta.sma(close, 200)
+dist_sma200 = (close / sma200 - 1) * 100
+
+// 252-day drawdown
+high252     = ta.highest(close, 252)
+drawdown252 = (close / high252 - 1) * 100
+
+// EMA trend filter: 21 / 55 / 100 / 200
+ema21  = ta.ema(close, 21)
+ema55  = ta.ema(close, 55)
+ema100 = ta.ema(close, 100)
+ema200 = ta.ema(close, 200)
+
+// ═══════════════════════════════════════════════════════
+// Scoring (0-100 each)
+// ═══════════════════════════════════════════════════════
+rsi_score      = math.max(0, math.min(100, (50 - rsi_val) * 2))
+keltner_score  = math.max(0, math.min(100, kelt_atr_dist * 30))
+sma200_score   = math.max(0, math.min(100, -dist_sma200 * 3))
+drawdown_score = math.max(0, math.min(100, -drawdown252 * 2.5))
+atr_score      = math.max(0, math.min(100, (atr_ratio - 1) * 40))
+
+// RSI + Stochastic dual confirmation
+rsi_raw   = math.max(0, (50 - rsi_val) * 2)
+stoch_raw = math.max(0, (50 - stoch_val) * 2)
+deep_bonus = (rsi_val < 30 and stoch_val < 20) ? 20.0 : 0.0
+stoch_score  = math.max(0, math.min(100, (rsi_raw + stoch_raw) / 2 + deep_bonus))
+
+// EMA trend filter: additive modifier (-6 bull to +6 bear)
+ema_trend = ((ema21 < ema55 ? 1.0 : 0.0) + (ema55 < ema100 ? 1.0 : 0.0) + (ema100 < ema200 ? 1.0 : 0.0)) / 3.0
+trend_mod = (ema_trend - 0.5) * 8
+
+raw_score = w_rsi * rsi_score + w_keltner * keltner_score + w_sma200 * sma200_score
+          + w_drawdown * drawdown_score + w_atr * atr_score + w_stoch * stoch_score
+composite = math.max(0, math.min(100, raw_score + trend_mod))
+
+// ═══════════════════════════════════════════════════════
+// Signal
+// ═══════════════════════════════════════════════════════
+buy_signal = composite >= threshold and not na(sma200)
+
+// Background: panic intensity gradient
+bgcolor(buy_signal ? color.new(color.green, 70) : na, title="Buy Zone")
+
+// Buy label
+plotshape(buy_signal, title="DCA Buy", style=shape.labelup,
+     location=location.belowbar, color=color.green, text="BUY",
+     textcolor=color.white, size=size.small)
+
+// Score plot
+plot(composite, title="Panic Score", color=color.new(color.orange, 0),
+     linewidth=1, display=display.none)
+hline(threshold, "Threshold", color=color.red, linestyle=hline.style_dashed)
+
+// Debug: component scores (hidden by default)
+plot(rsi_score,      "RSI Score",      color=color.blue,   display=display.none)
+plot(keltner_score,  "Keltner Score",  color=color.purple, display=display.none)
+plot(sma200_score,   "SMA200 Score",   color=color.gray,   display=display.none)
+plot(drawdown_score, "Drawdown Score", color=color.red,    display=display.none)
+plot(atr_score,      "ATR Score",      color=color.teal,   display=display.none)
+plot(stoch_score,    "Stoch Score",    color=color.orange, display=display.none)
