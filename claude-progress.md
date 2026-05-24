@@ -42,7 +42,7 @@
   - `docs/策略目录.md`.
 
 ## Pending
-- Commit and push the current branch archive after this handoff entry.
+- None; archive branch has been pushed to `origin/autoresearch/may17-baseline-next`.
 
 ## Known Issues
 - The current worktree includes accumulated strategy catalog moves, generated strategy artifacts, Pine updates, documentation updates, and deleted old loose investigation artifacts.
@@ -51,6 +51,7 @@
 
 ## Verification
 - Previously verified Bottom Signal unit tests, full test discovery, py_compile, JSON parsing, `git diff --check`, and protected-file checks.
+- Pushed archive branch to `origin/autoresearch/may17-baseline-next`.
 
 --- Session: 2026-05-24 Bottom Signal 中文学习 README ---
 ## Objective

@@ -8,7 +8,7 @@
 - 更新 `claude-progress.md`、`docs/策略目录.md` 和相关 strategy catalog README/SEARCH_FLOW 文档。
 
 ## Pending
-- 本 handoff 写完后，将当前工作区作为归档提交并 push 到当前分支 `autoresearch/may17-baseline-next`。
+- 无。当前归档已提交并 push 到 `origin/autoresearch/may17-baseline-next`。
 
 ## Known Issues
 - 当前工作区包含一批较大的策略研究产物、目录迁移和旧文件删除；这是前几轮策略整理的累计结果，不只是最后一份学习 README。
@@ -22,6 +22,7 @@
 - Verified: `.venv\Scripts\python.exe -m json.tool strategy_catalog\bottom_signal_formal\bottom_signal_results.json > $null`
 - Verified: `git diff --check`
 - Verified: `git diff --name-only -- config.py prepare.py run.py versions` returned empty output.
+- Verified: branch pushed to `origin/autoresearch/may17-baseline-next`.
 - Not verified: full 720-config search was not rerun after the final README-only update.
 
 ## Read First
